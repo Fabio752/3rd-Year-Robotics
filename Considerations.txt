@@ -9,8 +9,8 @@ LEGO-Motor_Position.py
     
 
 LEGO-Motor_DPS.py
-    Set a power limit makes the power bounded at a certain value.
-    Because the power is the current supplied so directly related to velocity, even by overtwist the wheel will not increase the velocity further.
+    Setting a power limit forces the power of the motor to be bounded at a certain value.
+    Because the power is proportional to the current supplied, the velocity is proprtional to the power and hence will not increase beyond a limit, even if the wheel is overstwisted
     However the velocity reading oscillate in a range of 475-525 for power cap 50.
     
     The encoder value changes accordingly to how fast the wheel it is going, so at very low power increases by 0 or 1, in the case of power = 50 it jumps three/four.
