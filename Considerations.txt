@@ -1,34 +1,20 @@
- 
+LEGO-Motor_DPS.py
+    Setting a power limit forces the power of the motor to be bounded at a certain value.
+    Because the power is proportional to the current supplied, the velocity is proprtional to the power and hence will not increase beyond a limit, even if the wheel is overstwisted.
+    Hence, the velocity reading was read in a range of 475-525 for power cap 50.
+    
+    The encoder value changes according to how fast the wheel is going, so at very low power increases by 0 or 1, in the case of power = 50 it jumps three/four.
+    
+    If we apply resistance to the powered wheeel, the power applied to the corresponding motor will incrase in an attempt to keep the velocity stable, due to the PID control.
+    The PID controller will detect the error (difference) in the intneded velocity of the wheel and the actual velocity.
+    If we suddenly release the pressure on the wheel, we observe a spike in velocity due to the augmented power we discussed above, but the control will then reduce the power to meet the velocity demand. 
+
+
 LEGO-Motor_Power.py
     In this script, since we are not demanding a certain velocity (velocity is not PID controlled), if we resist a wheel, the power supplied will not increase, thus the velocity will decrease.
     Everything else same as DPS one.
 
 
 LEGO-Motor_Position.py
-    Moving one wheel makes the encoder change, thus the other wheel turns as well up to the same encoded value and then stops.
+    Moving one wheel makes the encoder value change, this causes the motor driving the otherwheel to drive forward up to the same encoded value and then stops.
     
-
-LEGO-Motor_DPS.py
-    Setting a power limit forces the power of the motor to be bounded at a certain value.
-    Because the power is proportional to the current supplied, the velocity is proprtional to the power and hence will not increase beyond a limit, even if the wheel is overstwisted
-    However the velocity reading oscillate in a range of 475-525 for power cap 50.
-    
-    The encoder value changes accordingly to how fast the wheel it is going, so at very low power increases by 0 or 1, in the case of power = 50 it jumps three/four.
-    
-    If we try to resist the velocity demand set by one wheel by gently slow the other wheel, the power is going to increase in order to keep the velocity stable due to the PID control.
-    If we suddenly release the pressure on the wheel, we observe a spike in velocity due to the augmented power we discussed above, but the control will quickly reduce it to meet the velocity demand.
-    
-
-
-
-
-
-
-
-
-
-
-
-
-
-
