@@ -9,3 +9,24 @@ Try         X(cm)    Y(cm)
 8           0         1.6
 9           0.6       1.9
 10          1.2       2.2
+
+
+E(X) = 0.2
+Var(X) = 0.738
+
+E(Y) = 0.84
+Var(Y) = 0.8144
+
+Cov(X,Y) = 0.549
+
+Standard Deviation of X = 0.859
+Standard Deviation of Y = 0.902
+
+Given the definition of the Covariance Matrix:
+
+
+     -                                      -
+     | Var(X) = 0.738    Cov(X,Y) = 0.549   |
+P =  |                                      |
+     | Cov(X,Y) = 0.549  Var(Y) = 0.8144    |
+     -                                      -
