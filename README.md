@@ -24,17 +24,6 @@ Everything else is the same as the LEGO-Motor_DPS.py file
 * Moving one wheel makes the encoder value change, this causes the motor driving the other wheel to move forward until the two encoder values are the same
 
 **Calculating the Covariance Matrix**
-Try         X(cm)    Y(cm)    
-1           0.2      -0.1
-2           -0.8      0 
-3           -1.7     -0.8
-4           0.5       0.5
-5           1.4       0.8
-6           0.4       1.1
-7           0.2       1.2
-8           0         1.6
-9           0.6       1.9
-10          1.2       2.2
 
 | Try   |  X(cm)  | Y(cm)    |  
 |---|---|---|
@@ -69,4 +58,3 @@ Given the definition of the Covariance Matrix:
 |  Cov(X,Y) = 0.549 |  Var(Y) = 0.8144  |
 
 
-**For further thought**
