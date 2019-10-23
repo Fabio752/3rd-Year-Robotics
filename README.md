@@ -22,3 +22,4 @@ Everything else same as DPS one.
 *LEGO-Motor_Position.py*
 
 * Moving one wheel makes the encoder value change, this causes the motor driving the otherwheel to drive forward up to the same encoded value and then stops.
+
