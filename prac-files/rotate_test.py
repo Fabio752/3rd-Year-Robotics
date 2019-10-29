@@ -7,7 +7,7 @@ def get_encode_length(distance):
 	return (distance/39.5)*819.5
 
 def get_rotation_amount (degree):
-	return (degree/137.1) * 360
+	return (degree/135.1) * 360
 
 def stop_robot():
 	BP.reset_all()
@@ -55,7 +55,7 @@ try:
 		#Set degree rotation
 		target_degree_rotation = get_encode_length(40)
 		#Perform rotation
-		rotate(90, 90)
+	        rotate(90, 90)
 	stop_robot()
 
 except KeyboardInterrupt:

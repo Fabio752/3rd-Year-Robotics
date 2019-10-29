@@ -4,10 +4,10 @@ import time
 BP = brickpi3.BrickPi3()
 
 def get_encode_length(distance):
-	return (distance/38.2)*819.5
+	return (distance/39.1)*819.5
 
 def get_rotation_amount (degree):
-	return (degree/144.2) * 360
+	return (degree/138.7) * 360
 
 def print_robot_stats(port):
 	print("Port: %s Flag: %s Power: %s Position: %s Velocity: %s" % (port, BP.get_motor_status(port) [0], BP.get_motor_status(port) [1], BP.get_motor_status(port) [2], \
@@ -57,8 +57,6 @@ try:
 		#Reset encoders
          	BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
 		BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
-		#Set degree rotation
-		target_degree_rotation = get_encode_length(10)
 		#Perform rotation
 		rotate(90, 90)
 	stop_robot()

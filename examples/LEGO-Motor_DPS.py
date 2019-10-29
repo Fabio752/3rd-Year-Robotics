@@ -24,16 +24,16 @@ BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be 
 try:
     try:
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A)) # reset encoder A
-        BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B)) # reset encoder B
+        BP.offset_motor_encoder(BP.PORT_D, BP.get_motor_encoder(BP.PORT_D)) # reset encoder D
     except IOError as error:
         print(error)
     
-    BP.set_motor_power(BP.PORT_B, BP.MOTOR_FLOAT)                          # float motor B
-    BP.set_motor_limits(BP.PORT_A, 50)                                     # optionally set a power limit
+    BP.set_motor_power(BP.PORT_D, BP.MOTOR_FLOAT)                          # float motor D
+    #BP.set_motor_limits(BP.PORT_A, 50)                                     # optionally set a power limit
     while True:
         # The following BP.get_motor_encoder function returns the encoder value
         try:
-            target = BP.get_motor_encoder(BP.PORT_B)     # read motor B's position
+            target = BP.get_motor_encoder(BP.PORT_D)     # read motor D's position
         except IOError as error:
             print(error)
         
