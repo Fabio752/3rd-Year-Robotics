@@ -1,9 +1,8 @@
 import brickpi3
 import time
-#import statistics
-
 BP = brickpi3.BrickPi3()
-gain_value = 20
+gain_value = 3
+default_speed = -170
 speed_vals = [0] * 5
 BP.set_motor_limits(BP.PORT_A, 70, 200) #Power limit 70%, speed limit 200 dps)
 
@@ -27,8 +26,8 @@ try:
         print("Measured distance: %s, Difference: %s, Control speed: %s" % (distance, movement_distance, control_speed))
 
         #Use velocity control
-        BP.set_motor_dps(BP.PORT_A, control_speed)
-        BP.set_motor_dps(BP.PORT_B, control_speed)
-        time.sleep(0.3)
+        BP.set_motor_dps(BP.PORT_A, default_speed - control_speed)
+        BP.set_motor_dps(BP.PORT_B, default_speed + control_speed)
+        time.sleep(0.2)
 except KeyboardInterrupt:
     BP.reset_all()
