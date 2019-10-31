@@ -2,6 +2,7 @@
 
 import brickpi3
 import time
+import random
 BP = brickpi3.BrickPi3()
 
 
@@ -57,7 +58,22 @@ def rotate(degree_amount, speed_dps):
 	print("Rotation complete")
 
 
-def update_particle_set(mean, stand_dev):
+
+
+def update_particle_set(mean_distance, stand_dev_distance, mean_angle, stand_dev_angle):
+	for i in range(100):
+		x_new = PARTICLE_SET[i][0]+(10+random.gauss(mean_distance, stand_dev_distance))*cos(PARTICLE_SET[i][2])
+		y_new = PARTICLE_SET[i][1]+(10+random.gauss(mean_distance, stand_dev_distance))*sin(PARTICLE_SET[i][2])
+		theta_new = PARTICLE_SET[i][2]+random.gauss(mean_angle, stand_dev_angle)
+		PARTICLE_SET[i] = (x_new, y_new, theta_new)
+
+
+def move():
+	for i in range (4):
+		go_forward(10, 90)
+		update_particle_set()
+
+
 
 
 
@@ -65,14 +81,13 @@ def update_particle_set(mean, stand_dev):
 #STARTING SCRIPT
 ##################################################
 
+try:
 
-#Populating initial array of tuples
-for _ in range(100):
-    #Set all initial values to zero
-    PARTICLE_SET.append((0,0,0))
+	#Populating initial array of tuples
+	for i in range(100):
+	    #Set all initial values to zero
+	    PARTICLE_SET.append((0,0,0))
+	move()
 
-go_forward(40,90)
-
-
-
-
+except KeyboardInterrupt:
+	stop_robot()
