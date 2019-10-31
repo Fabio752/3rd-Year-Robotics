@@ -3,6 +3,7 @@
 import brickpi3
 import time
 import random
+import math
 BP = brickpi3.BrickPi3()
 
 
@@ -26,6 +27,10 @@ def stop_robot():
 	BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 
 def go_forward(distance, speed_dps):
+        #Negating speed
+        speed_dps = -speed_dps
+
+
 	BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
 	BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 	#Initializations
@@ -36,7 +41,7 @@ def go_forward(distance, speed_dps):
 
 	print("target degree rotation %s" % target_degree_rotation)
 	while actual_degree_rotation < target_degree_rotation:
-		actual_degree_rotation = (BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B))/2
+		actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B))/2
                 #print("actual degree rotation: %s" % actual_degree_rotation)
 		print_robot_stats(BP.PORT_A)
 		print_robot_stats(BP.PORT_B)
@@ -44,6 +49,9 @@ def go_forward(distance, speed_dps):
         print("Motion complete")
 
 def rotate(degree_amount, speed_dps):
+        #Negate the speed
+        speed_dps = -speed_dps
+
 	#Rotate robot left by 90 degrees
 	actual_degree = 0
 	BP.set_motor_dps(BP.PORT_A, -speed_dps)
@@ -51,31 +59,66 @@ def rotate(degree_amount, speed_dps):
 	target_rotation = get_rotation_amount(degree_amount)
 	print("target rotation %s" % target_rotation)
 	while actual_degree < target_rotation:
-		actual_degree = BP.get_motor_encoder(BP.PORT_B)
-        	print_robot_stats(BP.PORT_A)
-		print_robot_stats(BP.PORT_B)
-		time.sleep(0.02)
+            #Actual degree negate
+	    actual_degree = -BP.get_motor_encoder(BP.PORT_B)
+            print_robot_stats(BP.PORT_A)
+	    print_robot_stats(BP.PORT_B)
+	    time.sleep(0.02)
 	print("Rotation complete")
 
 
 
 
-def update_particle_set(mean_distance, stand_dev_distance, mean_angle, stand_dev_angle):
+def update_particle_set_line(mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
 	for i in range(100):
-		x_new = PARTICLE_SET[i][0]+(10+random.gauss(mean_distance, stand_dev_distance))*cos(PARTICLE_SET[i][2])
-		y_new = PARTICLE_SET[i][1]+(10+random.gauss(mean_distance, stand_dev_distance))*sin(PARTICLE_SET[i][2])
+		x_new = PARTICLE_SET[i][0]+(distance+random.gauss(mean_distance, stand_dev_distance))*math.cos(PARTICLE_SET[i][2])
+		y_new = PARTICLE_SET[i][1]+(distance+random.gauss(mean_distance, stand_dev_distance))*math.sin(PARTICLE_SET[i][2])
 		theta_new = PARTICLE_SET[i][2]+random.gauss(mean_angle, stand_dev_angle)
 		PARTICLE_SET[i] = (x_new, y_new, theta_new)
 
+def update_particle_set_angle(mean, stand_dev, alpha):
+	for i in range(100):
+	    theta_new = PARTICLE_SET[i][2]+alpha+random.gauss(mean, stand_dev)
+	    PARTICLE_SET[i] = (PARTICLE_SET[i][0],PARTICLE_SET[i][1],theta_new)
+
+def print_set(line, particles):
+    print ("drawLine:" + str(line))
+    print ("drawParticles" + str(particles))
+
+def update_line(update_x, positive, distance, line):
+    if update_x and positive:
+        #moving in the x direction
+        line = (line[2], line[1], line[2]+distance, line[3])
+    if not update_x and positive:
+        line = (line[0], line[3], line[2], line[3]+distance)
+    if update_x and not positive:
+        line = (line[2], line[1], line[2]-distance, line[3]
+    if not update_x and not positive:
+        line = (line[0], line[3], line[2], line[3]-distance)
 
 def move():
+        line[] = (0,0,0,0)
 	for i in range (4):
-		go_forward(10, 90)
-		update_particle_set()
+            #Update booleans
+            positive = (i < 2)
+            update_x = not(i % 2)
 
+            for j in range(4):
+		go_forward(10, 180)
+                stop_robot()
+                #New values according on position and particle set
+                update_line(update_x, positive, 10, line)
+		update_particle_set_line(0, 1, 0, 1, 10)
 
+                for k in range(100):
+                    print_set(line, PARTICLE_SET[k]
 
+                #Waiting time
+                time.sleep(2)
 
+            rotate(90, 90)
+            update_particle_set_angle(0, 1, 90)
+        stop_robot()
 
 ###################################################
 #STARTING SCRIPT
@@ -83,7 +126,7 @@ def move():
 
 try:
 
-	#Populating initial array of tuples
+     	#Populating initial array of tuples
 	for i in range(100):
 	    #Set all initial values to zero
 	    PARTICLE_SET.append((0,0,0))
