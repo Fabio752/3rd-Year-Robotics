@@ -8,30 +8,25 @@ BP = brickpi3.BrickPi3()
 
 
 NUMBER_OF_PARTICLES = 100
-general_weight = 1
+general_weight = 1/NUMBER_OF_PARTICLES
+DISTANCE = 100
 
 class state:
     def __init__(self):
-        self.line = [0,0,0,0]
+        self.line = [400, 500, 400,500]
         PARTICLE_SET = []
 
         for i in range(NUMBER_OF_PARTICLES):
-            particle = [0,0,0, general_weight]
+            particle = [400, 500, 0, general_weight]
             PARTICLE_SET.append(particle)
 
         self.PARTICLE_SET = PARTICLE_SET
 
-    def update_particle_set_line(self, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
+    def update_particle_set_line(self, opposite_direction, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
         i = 0
+        if opposite_direction:
+            distance = -distance
         for particle in self.PARTICLE_SET:
-            print ("x_new = ")
-            print(particle[0])
-            print(" + ")
-            print( distance)
-            print("random.gauss(mean_distance, stand_dev_distance)")
-            print( " * math.cos(")
-            print(particle[2])
-            print( ")\n") 
             x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(particle[2])
             y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(particle[2])
             theta_new = particle[2] + random.gauss(mean_angle, stand_dev_angle)
@@ -47,19 +42,18 @@ class state:
 
     def print_set(self):
         print ("drawLine:" + str(self.line))
-        for particle in self.PARTICLE_SET:
-            print ("drawParticles:" + str(particle))
+        print ("drawParticles:" + str(self.PARTICLE_SET))
 
     def update_line(self, update_x, positive, distance):
         if update_x and positive:
             #moving in the x direction
             self.line = (self.line[2], self.line[1], self.line[2] + distance, self.line[3])
         if not update_x and positive:
-            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] + distance)
+            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] - distance)
         if update_x and not positive:
             self.line = (self.line[2], self.line[3], self.line[2] - distance, self.line[3])
         if not update_x and not positive:
-            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] - distance)
+            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] + distance)
 
 def get_encode_length(distance):
     return (distance / 39.1) * 819.5
@@ -121,19 +115,19 @@ def move():
         #Update booleans
         positive = (i < 2)
         update_x = not(i % 2)
-
+        opposite_direction = i == 1 or i == 3
         for j in range(4):
-            go_forward(10, 180)
+            go_forward(DISTANCE/4, 180)
             stop_robot()
             #New values according on position and particle set
-            s.update_line(update_x, positive, 100)
-            s.update_particle_set_line(0, 0.01, 0, 0.01, 100)
+            s.update_line(update_x, positive, DISTANCE)
+            s.update_particle_set_line(opposite_direction, 0, 1, 0, 0.002, DISTANCE)
             s.print_set()
 
             #Waiting time
             time.sleep(2)
         rotate(90, 90)
-        s.update_particle_set_angle(0,0.01, 90)
+        s.update_particle_set_angle(0, 0.015, math.pi/2)
     stop_robot()
 
 ###################################################
