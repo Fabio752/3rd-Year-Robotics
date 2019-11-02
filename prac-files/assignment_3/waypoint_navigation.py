@@ -8,7 +8,7 @@ BP = brickpi3.BrickPi3()
 
 
 NUMBER_OF_PARTICLES = 100
-general_weight = 1/NUMBER_OF_PARTICLES
+general_weight = 1
 
 class state:
     def __init__(self):
@@ -24,6 +24,14 @@ class state:
     def update_particle_set_line(self, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
         i = 0
         for particle in self.PARTICLE_SET:
+            print ("x_new = ")
+            print(particle[0])
+            print(" + ")
+            print( distance)
+            print("random.gauss(mean_distance, stand_dev_distance)")
+            print( " * math.cos(")
+            print(particle[2])
+            print( ")\n") 
             x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(particle[2])
             y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(particle[2])
             theta_new = particle[2] + random.gauss(mean_angle, stand_dev_angle)
@@ -34,7 +42,7 @@ class state:
         i = 0
         for particle in self.PARTICLE_SET:
             theta_new = particle[2] + alpha + random.gauss(mean, stand_dev)
-            self.PARTICLE_SET[i] = (particle[1], particle[2], theta_new, particle[3])
+            self.PARTICLE_SET[i] = (particle[0], particle[1], theta_new, particle[3])
             i = i + 1
 
     def print_set(self):
@@ -119,13 +127,13 @@ def move():
             stop_robot()
             #New values according on position and particle set
             s.update_line(update_x, positive, 100)
-            s.update_particle_set_line(0, 1, 0, 1, 100)
+            s.update_particle_set_line(0, 0.01, 0, 0.01, 100)
             s.print_set()
 
             #Waiting time
             time.sleep(2)
         rotate(90, 90)
-        s.update_particle_set_angle(0, 10, 90)
+        s.update_particle_set_angle(0,0.01, 90)
     stop_robot()
 
 ###################################################
