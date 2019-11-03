@@ -92,9 +92,9 @@ class robot:
     def set_estimate_angle_motion(self):
         estimate_angle_motion = 0
         for particle in self.state.get_particle_set():
-            estimate_angle_motion = estimate_position + particle[2]
+            estimate_angle_motion = estimate_angle_motion + particle[2]
         self.estimate_angle_motion = estimate_angle_motion / NUMBER_OF_PARTICLES
-        print("estimate angle motion: %d\n", estimate_angle_motion)
+        print("estimate angle motion: ", self.estimate_angle_motion)
         
     def get_estimate_position(self):
         return self.estimate_position
@@ -104,7 +104,7 @@ class robot:
         for particle in self.state.get_particle_set():
             estimate_position = (estimate_position[0] + particle[0], estimate_position[1] + particle[1])
         self.estimate_position = (estimate_position[0] / NUMBER_OF_PARTICLES, estimate_position[1] / NUMBER_OF_PARTICLES)
-        print("estimate position: %d\n", estimate_position)
+        print("estimate position: ", self.estimate_position)
         
     def print_robot_stats(self, port):
         print("Port: %s Flag: %s Power: %s Position: %s Velocity: %s" % (port, BP.get_motor_status(port) [0], BP.get_motor_status(port) [1], BP.get_motor_status(port) [2], \
@@ -134,10 +134,10 @@ class robot:
             #print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
             #print("Motion complete")
-        self.set_estimate_angle_motion
-        self.set_estimate_position
+        self.set_estimate_angle_motion()
+        self.set_estimate_position()
 
-    def rotate(self, degree_amount, speed_dps):
+    def rotate(self, rad_amount, speed_dps):
         #Negate the speed
         speed_dps = -speed_dps
 
@@ -145,7 +145,7 @@ class robot:
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-        target_rotation = get_rotation_amount(degree_amount)
+        target_rotation = get_rotation_amount(rad_amount)
         #print("target rotation %s" % target_rotation)
         while actual_degree < target_rotation:
             #Actual degree negate
@@ -154,8 +154,8 @@ class robot:
             #print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
             #print("Rotation complete")
-        self.set_estimate_angle_motion
-
+        self.state.update_particle_set_angle(0, 0.15, rad_amount)
+        self.set_estimate_angle_motion()
 ###################################################
 #STARTING SCRIPT
 ##################################################
@@ -175,12 +175,11 @@ try:
             #New values according on position and particle set
             s.update_line(x_direction, positive_motion, DISTANCE)
             s.update_particle_set_line(opposite_direction, 0, 1, 0, 0.002, DISTANCE)
-            s.print_set()
+            #s.print_set()
 
             #Waiting time
             time.sleep(2)
-        r.rotate(90, 90)
-        s.update_particle_set_angle(0, 0.015, math.pi/2)
+        r.rotate(math.pi/2, 90)
     r.stop_robot()
     
 
