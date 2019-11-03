@@ -9,7 +9,6 @@ BP = brickpi3.BrickPi3()
 
 NUMBER_OF_PARTICLES = 100
 general_weight = 1/NUMBER_OF_PARTICLES
-DISTANCE = 100
 
 def get_encode_length(distance):
     return (distance / 39.1) * 819.5
@@ -40,13 +39,11 @@ class state:
     def set_particle_set(self, particle_set):
         self.PARTICLE_SET = particle_set
         
-    def update_particle_set_line(self, opposite_direction, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
+    def update_particle_set_line(self, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
         i = 0
-        if opposite_direction:
-            distance = -distance
         for particle in self.PARTICLE_SET:
-            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(particle[2])
-            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(particle[2])
+            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(math.pi + particle[2])
+            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(math.pi + particle[2])
             theta_new = particle[2] + random.gauss(mean_angle, stand_dev_angle)
             self.PARTICLE_SET[i] = (x_new, y_new, theta_new, particle[3])
             i = i + 1
@@ -62,20 +59,12 @@ class state:
         print ("drawLine:" + str(self.line))
         print ("drawParticles:" + str(self.PARTICLE_SET))
 
-    def update_line(self, update_x, positive, distance):
-        if update_x and positive:
-            #moving in the x direction
-            self.line = (self.line[2], self.line[1], self.line[2] + distance, self.line[3])
-        if not update_x and positive:
-            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] - distance)
-        if update_x and not positive:
-            self.line = (self.line[2], self.line[3], self.line[2] - distance, self.line[3])
-        if not update_x and not positive:
-            self.line = (self.line[2], self.line[3], self.line[2], self.line[3] + distance)
+    def update_line(self, final_x, final_y):
+        self.line = (self.line[2], self.line[3], final_x, final_y)
 
 class robot:
     def __init__(self, positive_motion, angle_motion, state):
-        self.estimate_position = [0, 0]
+        self.estimate_position = (state.line[0], state.line[1])
         self.positive_motion = positive_motion
         self.estimate_angle_motion = angle_motion
         self.state = state
@@ -115,18 +104,19 @@ class robot:
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
         BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 
-    def go_forward(self, distance, speed_dps):
+    def go_forward(self, distance, speed_dps, final_x, final_y):
         #Negating speed
         speed_dps = -speed_dps
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
         BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
         #Initializations
-        target_degree_rotation = get_encode_length(distance)
+        target_degree_rotation = get_encode_length(abs(distance))
         actual_degree_rotation = 0
         BP.set_motor_dps(BP.PORT_A, speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
 
         #print("target degree rotation %s" % target_degree_rotation)
+        
         while actual_degree_rotation < target_degree_rotation:
             actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B))/2
             #print("actual degree rotation: %s" % actual_degree_rotation)
@@ -134,10 +124,17 @@ class robot:
             #print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
             #print("Motion complete")
+        
+        # Update particle set.
+        self.state.update_line(final_x, final_y)
+        self.state.update_particle_set_line(0, 1, 0, 0.01, distance)
+        
+        # Update robot position and orientation estimates.
         self.set_estimate_angle_motion()
         self.set_estimate_position()
 
     def rotate(self, rad_amount, speed_dps):
+
         #Negate the speed
         speed_dps = -speed_dps
 
@@ -154,8 +151,24 @@ class robot:
             #print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
             #print("Rotation complete")
-        self.state.update_particle_set_angle(0, 0.15, rad_amount)
+        self.state.update_particle_set_angle(0, 0.015, rad_amount)
         self.set_estimate_angle_motion()
+        
+    def navigate_to_waypoint(self, x, y):
+        x_diff = x - self.estimate_position[0]
+        y_diff = y - self.estimate_position[1]
+        if not (x_diff == 0):
+            rotation_amount = math.atan(y_diff/x_diff) - self.estimate_angle_motion  
+        else :
+            rotation_amount = math.pi / 2
+            
+        self.rotate(rotation_amount, 90)       
+        distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
+        if x_diff > 0 :
+            distance_amount = -distance_amount
+        self.go_forward(distance_amount, 180, x, y)
+        self.state.print_set()
+
 ###################################################
 #STARTING SCRIPT
 ##################################################
@@ -163,23 +176,23 @@ class robot:
 try:
     s = state()
     r = robot(1, 0, s)
+    x = 400
+    y = 500
+    offset = 50
+    offset_coefficient = 1
     for i in range (4):
-        #Update booleans
-        positive_motion = i < 2
-        x_direction = not(i % 2)
-        r.set_positive_motion(positive_motion)
-        opposite_direction = i ==1 or i == 3
-        for j in range(4):
-            r.go_forward(DISTANCE/4, 180)
-            r.stop_robot()
-            #New values according on position and particle set
-            s.update_line(x_direction, positive_motion, DISTANCE)
-            s.update_particle_set_line(opposite_direction, 0, 1, 0, 0.002, DISTANCE)
-            #s.print_set()
-
-            #Waiting time
+        for j in range (4):
+            if i > 1 :
+                offset_coefficient = -1
+            if not (i % 2):
+                x = x + offset * offset_coefficient
+            else :
+                y = y - offset * offset_coefficient 
+            r.navigate_to_waypoint(x, y)
             time.sleep(2)
-        r.rotate(math.pi/2, 90)
+    
+        r.rotate(math.pi / 2, 90)
+        time.sleep(2)
     r.stop_robot()
     
 
