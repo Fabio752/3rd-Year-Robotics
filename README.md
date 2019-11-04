@@ -1,21 +1,21 @@
-### Assignment 1
+### Assignement 1
 
 **Investigating And Understanding Motor Control**
 
 *LEGO-Motor_DPS.py*
 
-* Setting a power limit forces the power of the motor to be bounded at a certain value.Because the power is proportional to the current supplied and velocity is proportional to the power, velocity will not increase beyond a limit. Hence, the velocity reading was read in a range of 475-525 for power cap 50.
+* Setting a power limit forces the power of the motor to be bounded at a certain value.Because the power is proportional to the current supplied, the velocity is proportional to the power and hence will not increase beyond a limit. Hence, the velocity reading was read in a range of 475-525 for power cap 50.
 
 * The encoder value changes according to how fast the wheel is going, so at very low power, when velocity is low, it increases by 0 or 1 every time that the motor status is displayed.
 In the case of power = 50, when the velocity is higher, it increases by three/four encoder values at a time.
 
-* If we apply resistance to the powered wheel, the power applied to the corresponding motor will increase in an attempt to keep the velocity stable, due to the PID control.
-The PID controller will detect the error (difference) between the nominal velocity of the wheel and the actual velocity, and will therefore increase the power supplied to the motors. We see that there is little change in the velocity when we resist the wheels, but there are power increases when the wheels encounter resistance. This type of PID control setup allows the robot tp have steady velocities even if it encounters resistance when performing tasks like going up a steep piece of ground. 
+* If we apply resistance to the powered wheel, the power applied to the corresponding motor will incrase in an attempt to keep the velocity stable, due to the PID control.
+The PID controller will detect the error (difference) between the nominal velocity of the wheel and the actual velocity, and will therefore increase the power supplied to the motors. We see that there is little change in the velocity when we resist the wheels, but there are power increses when the wheels encounter resistance. This type of PID control setup allows the robot tp have steady velocities even if it encounters resistance when performing tasks like going up a steep piece of ground. 
 When we suddenly release the resistance imposed to the wheel, the wheels will spin much faster for a few moments given the higher power being supplied but will quickly adjust, again because of the PID Compensation.
 
 *LEGO-Motor_Power.py*
 
-* In this script, since we are not demanding a certain velocity (power is not PID controlled), if we resist a wheel, the power supplied will not increase, thus the velocity will decrease.
+* In this script, since we are not demanding a certain velocity (velocity is not PID controlled), if we resist a wheel, the power supplied will not increase, thus the velocity will decrease.
 Everything else is the same as the LEGO-Motor_DPS.py file
 
 
@@ -56,5 +56,48 @@ Given the definition of the Covariance Matrix:
 |---|---|
 |  Var(X) = 0.738  | Cov(X,Y) = 0.549  |    
 |  Cov(X,Y) = 0.549 |  Var(Y) = 0.8144  |
+
+
+**For further thought**
+
+*Which causes a larger effect on your robot, imprecision in drive distance or rotation angle?*
+
+* The thing which can cause the largest imprecision in the drive in the robot in our case is the fact that the initial trajectory is not perfectly straight. This means that the initial rotation is not perfectly precise, we will have an error that will compound through the next two turns and will make the final distance to the point larger. In our case, the rotation angle causes a bigger effect in our robot that the rotation angle. 
+* 
+
+--------------------------
+
+
+### Assignement 3 : Probabilistic Motion and Sensing
+
+**Sonar Investigation**
+
+*1)When placed facing and perpendicular to a smooth surface such as a wall, what are the minimum and maximum depths that the sensor can reliably measure?*
+
+The ultrasonic sensor functions by sending a pulse of ultrasonic sound (which is above the human hearing range in the frequency spectrum) and measuring the amount of time it takes for the pulse to be reflected and be measured by the sensor again. By making use of our knowledge of the speed of sound, we can easily calculate the distance to an object based on the time it takes for the waveform to come back.
+
+The distance the sensor displays in the example program is measured in cm, and encoded using a single byte, meaning that the minimum distance measured is 0cm and the maximum distance is in theory 255cm. However, the number 255 is kept for objects that are too far away to measure. In reality, the minimum distance that is measured in reality is about 4 cm. 
+
+According to the specification of the sensor, the sensor is able to measure distances from 0 to 2.5 meters with a precision of +/-3 cm. Also, large-sized objects with hard surfaces provide the best readings. Objects made from soft fabrics, from curved objects (e.g. a ball), or from very thin and small objects can be diffi cult for the sensor to read.
+
+*2)Move the sonar so that it faces the wall at a non-orthogonal incidence angle. What is the maximum angular deviation from perpendicular to the wall at which it will still give sensible readings?*
+
+Approximately 15 degrees - 30 degrees (expand on this tomorrow)
+
+*3)Do your sonar depth measurements have any systematic (non-zero mean) errors? To test this, set up the sensor at a range of hand-measured depths (20cm, 40cm, 60cm, 80cm, 100cm) from a wall and record depth readings. Are they consistently above or below what they should be?*
+
+Readings are in the txt files. (Need to change them in order to have something to discuss, done tomorrow)
+
+As mentioned before the specification sets the uncertainty of measurement at +-3cm, which deviates from our experimental measurements by (...) (fill tomorrow)
+
+
+*4)What is the the accuracy of the sonar sensor and does it depend on depth? At each of two chosen hand-measured depths (40cm and 100cm), make 10 separate depth measurements (each time picking up and replacing the sensor) and record the values. Do you observe the same level of scatter in each case?*
+
+(Again, need to take the new set of measurements tomorrow)
+
+*5)In a range of general conditions for robot navigation, what fraction of the time do you think your sonar gives garbage readings very far from ground truth?*
+
+When the robot is stationary, the chance of the robot returning garbage/incorrect values is almost nothing, as can be seen by some of our text output files. On the other hand, when the robot is in motion (... this needs to be tested as well.. )
+
 
 
