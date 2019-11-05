@@ -145,18 +145,19 @@ class robot:
     # Rotation on the spot.    
     def rotate(self, rad_amount, speed_dps):
         # Negate the speed.
-        speed_dps = -speed_dps
+        if(rad_amount >0):
+            speed_dps = -speed_dps
 
         # Rotate robot left by 90 degrees.
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-        target_rotation = get_rotation_amount(rad_amount)
+        target_rotation = get_rotation_amount(abs(rad_amount))
         # print("target rotation %s" % target_rotation)
         print("target_rotation %s\n" %target_rotation)
         while actual_degree < target_rotation:
             # Actual degree negate
-            actual_degree = -BP.get_motor_encoder(BP.PORT_B)
+            actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
             # print_robot_stats(BP.PORT_A)
             # print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
@@ -180,6 +181,8 @@ class robot:
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
         if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
+            if (x < 0):
+                rotation_amount = rotation_amount + math.pi
         #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
         elif (x_diff < 0.5 and x_diff > -0.5) :
             if (y_diff >=  0): 
@@ -231,8 +234,8 @@ class robot:
 ##################################################
 
 try:
+    r = robot()
     while(1):    
-	r = robot()
     	x = input("Specify coordinate x\n")
     	y = input("Specify coordinate y\n")
     	r.navigate_to_waypoint(x, y)
