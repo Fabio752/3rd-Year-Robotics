@@ -335,7 +335,6 @@ class state:
         print ("drawLine:" + str(tuple(res_line)))
         print ("drawParticles:" + str(res_particle_list))
 
-
 # A robot has a state and an estimated location.
 class robot:
     # Initialise member variables.
@@ -414,13 +413,24 @@ class robot:
         # Compute coordinate differences.
         x_diff = x - self.estimate_location[0]
         y_diff = y - self.estimate_location[1]
-
-        # Avoid division by 0.
-        if not (x_diff == 0):
+       
+        # We need to find theta either way, so if x_diff is zero, we need to rotate by 
+        if not (x_diff == 0) and (y_diff == 0) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
-        else :
-            rotation_amount = math.pi / 2
-
+        #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
+        else if (x_diff == 0) :
+            if (y_diff > 0):
+                #90-theta
+                rotation_amount = math.pi/2 - self_estimate_location[2]
+            else:
+                #270-theta
+                rotation_amount = 3*math.pi/2 - self_estimate_location[2]
+        else if (y_diff == 0) :
+            if (x_diff > 0) :
+                rotation_amount = -self_estimate_location[2]
+            else:
+                rotation_amount = math.pi - self_estimate_location[2]
+            
         # Step1: rotation.
         self.rotate(rotation_amount, 90)
 
