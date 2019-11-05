@@ -71,6 +71,7 @@ class state:
     
       # Graphics.
     def print_set(self):
+        # Initialise scaling values.
         scale = 10
         res_line = [res * scale for res in self.line]
         res_line[0] += 400
@@ -87,10 +88,7 @@ class state:
             res_particle[2] = particle[2]
             # print("After" + str(tuple(res_particle)))
             res_particle_list.append(tuple(res_particle))
-        print (res_line[0])
-        print(res_line[1])
-        print (res_line[2])
-        print(res_line[3])
+
         print ("drawLine:" + str(tuple(res_line)))
         print ("drawParticles:" + str(res_particle_list))
         
@@ -123,17 +121,11 @@ class robot:
         actual_degree_rotation = 0
         BP.set_motor_dps(BP.PORT_A, speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-
-        # print("target degree rotation %s" % target_degree_rotation)
         
         while actual_degree_rotation < target_degree_rotation:
-            actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B))/2
-            # print("actual degree rotation: %s" % actual_degree_rotation)
-            # self.print_robot_stats(BP.PORT_A)
-            # self.print_robot_stats(BP.PORT_B)
-            time.sleep(0.02)
-            # print("Motion complete")
-        
+            actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B)) / 2
+            time.sleep(0.02)        
+
         # Update particle set.
         self.state.update_line(final_x, final_y)
         self.state.update_particle_set_line(0, 1, 0, 0.01, distance)
@@ -144,24 +136,20 @@ class robot:
 
     # Rotation on the spot.    
     def rotate(self, rad_amount, speed_dps):
-        # Negate the speed.
-        if(rad_amount >0):
+        # Negate the speed if has to turn left, keep it for turning right.
+        if(rad_amount > 0):
             speed_dps = -speed_dps
 
-        # Rotate robot left by 90 degrees.
+        # Set opposite wheels speed.
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
         target_rotation = get_rotation_amount(abs(rad_amount))
-        # print("target rotation %s" % target_rotation)
-        print("target_rotation %s\n" %target_rotation)
+        
+        # Rotation on the spot.
         while actual_degree < target_rotation:
-            # Actual degree negate
             actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
-            # print_robot_stats(BP.PORT_A)
-            # print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
-            # print("Rotation complete")
         
         # Update the particle set and location estimates.
         self.state.update_particle_set_angle(0, 0.015, rad_amount)
@@ -171,45 +159,40 @@ class robot:
     #    1 - rotating.
     #    2 - go straight.
     def navigate_to_waypoint(self, x, y):
-        # Compute coordinate differences.
+        # Compute coordinate differences and scale meters->centimeters.
         x = x * 100
         y = y * 100
         x_diff = x - self.estimate_location[0]
         y_diff = y - self.estimate_location[1]
         rotation_amount = 0;
         
-        # We need to find theta either way, so if x_diff is zero, we need to rotate by 
+        # Standard case, just compute the angle.
         if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
-            if (x < 0):
+            if (x < 0): # atan returns the wrong value if the angle is in the 2nd/4th quadrant.
                 rotation_amount = rotation_amount + math.pi
-        #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
+
+        # If the point lies roughly on the same line we have special cases.
+        # Case on the same vertical.
         elif (x_diff < 0.5 and x_diff > -0.5) :
             if (y_diff >=  0): 
-                # 90 - theta
-                print(self.estimate_location[2])
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
-            else:
-                # 270 - theta
+            else :
                 rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
+        
+        # Case on the same horizontal.
         elif (y_diff < 0.5 and y_diff > -0.5) :
             if (x_diff >= 0) :
                 rotation_amount = - self.estimate_location[2]
             else:
                 rotation_amount = math.pi - self.estimate_location[2]
         
-       # if(rotation_amount >= math.pi * 2):
-        #    rotation_amount = rotation_amount - math.pi * 2
-            
-        # Step1: rotation.
-        # print("rotation %s\n" %rotation_amount)
+        # Step1: rotate.
         self.rotate(rotation_amount, 90)       
         
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
-        
-        print("distance amount: %s", distance_amount)
-                
+                        
         # Step2: go forward.
         # print("distance amount %s \n" % distance_amount);
         self.go_forward(distance_amount, 180, x, y)
@@ -217,7 +200,7 @@ class robot:
         # Print particles and line status.
         self.state.print_set()
     
-    # Debugging.
+    # Debugging Function.
     def print_robot_stats(self, port):
         print("Port: %s Flag: %s Power: %s Position: %s Velocity: %s" % (port, BP.get_motor_status(port) [0], BP.get_motor_status(port) [1], BP.get_motor_status(port) [2], \
         BP.get_motor_status(port) [3]))
@@ -234,12 +217,14 @@ class robot:
 ##################################################
 
 try:
+    # Keep inputting coordinates, the robot will go there.
     r = robot()
     while(1):    
     	x = input("Specify coordinate x\n")
     	y = input("Specify coordinate y\n")
     	r.navigate_to_waypoint(x, y)
     	r.stop_robot()
+
 # Keyboard Interrupt.    
 except KeyboardInterrupt:
     r.stop_robot()
