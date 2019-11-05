@@ -49,8 +49,8 @@ class state:
     def update_particle_set_line(self, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
         i = 0
         for particle in self.PARTICLE_SET:
-            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(math.pi + particle[2])
-            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(math.pi + particle[2])
+            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(particle[2])
+            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(particle[2])
             theta_new = particle[2] + random.gauss(mean_angle, stand_dev_angle)
             # We are currently not changing the weights.
             self.PARTICLE_SET[i] = (x_new, y_new, theta_new, particle[3])
@@ -87,7 +87,10 @@ class state:
             res_particle[2] = particle[2]
             # print("After" + str(tuple(res_particle)))
             res_particle_list.append(tuple(res_particle))
-
+        print (res_line[0])
+        print(res_line[1])
+        print (res_line[2])
+        print(res_line[3])
         print ("drawLine:" + str(tuple(res_line)))
         print ("drawParticles:" + str(res_particle_list))
         
@@ -116,7 +119,7 @@ class robot:
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
         BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
         # Initializations.
-        target_degree_rotation = get_encode_length(abs(distance))
+        target_degree_rotation = get_encode_length(distance)
         actual_degree_rotation = 0
         BP.set_motor_dps(BP.PORT_A, speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
@@ -148,7 +151,7 @@ class robot:
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-        target_rotation = get_rotation_amount(abs(rad_amount))
+        target_rotation = get_rotation_amount(rad_amount)
         # print("target rotation %s" % target_rotation)
         print("target_rotation %s\n" %target_rotation)
         while actual_degree < target_rotation:
@@ -168,9 +171,10 @@ class robot:
     #    2 - go straight.
     def navigate_to_waypoint(self, x, y):
         # Compute coordinate differences.
-        
-        x_diff = 100 * x - self.estimate_location[0]
-        y_diff = self.estimate_location[1] - 100 * y
+        x = x * 100
+        y = y * 100
+        x_diff = x - self.estimate_location[0]
+        y_diff = y - self.estimate_location[1]
         rotation_amount = 0;
         
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
@@ -180,6 +184,7 @@ class robot:
         elif (x_diff < 0.5 and x_diff > -0.5) :
             if (y_diff >=  0): 
                 # 90 - theta
+                print(self.estimate_location[2])
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
             else:
                 # 270 - theta
@@ -199,13 +204,9 @@ class robot:
         
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
-
-	print("distance amount: %s", distance_amount)
         
-        # Make the particles follow the line consistently.
-        if x_diff > 0 :
-            distance_amount = -distance_amount
-        
+        print("distance amount: %s", distance_amount)
+                
         # Step2: go forward.
         # print("distance amount %s \n" % distance_amount);
         self.go_forward(distance_amount, 180, x, y)
@@ -225,7 +226,7 @@ class robot:
         BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
     
 
-###################################################
+##################################################
 #STARTING SCRIPT
 ##################################################
 
