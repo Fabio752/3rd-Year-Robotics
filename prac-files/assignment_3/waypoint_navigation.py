@@ -1,3 +1,4 @@
+
 # Imports.
 import brickpi3
 import time
@@ -12,8 +13,9 @@ general_weight = 1/NUMBER_OF_PARTICLES
 def get_encode_length(distance):
     return (distance / 39.1) * 819.5
 
-def get_rotation_amount (degree):
-    return (degree / 2.42) * 2 * math.pi
+def get_rotation_amount (rad):
+    degree_amount = rad * 57.296
+    return (degree_amount / 144.7) * 360
 
 # A state has a particle set and a line.
 class state:
@@ -70,7 +72,7 @@ class state:
       # Graphics.
     def print_set(self):
         scale = 10
-        res_line = [res*scale for res in self.line]
+        res_line = [res * scale for res in self.line]
         res_line[0] += 400
         res_line[1] += 500
         res_line[2] += 400
@@ -78,12 +80,12 @@ class state:
 
         res_particle_list = []
         for particle in self.PARTICLE_SET:
-            print("Before" + str(particle))
+            # print("Before" + str(particle))
             res_particle = [None, None, None]
-            res_particle[0] = particle[0]*scale +400
-            res_particle[1] = particle[1]*scale +500
+            res_particle[0] = particle[0] * scale + 400
+            res_particle[1] = particle[1] * scale + 500
             res_particle[2] = particle[2]
-            print("After" + str(tuple(res_particle)))
+            # print("After" + str(tuple(res_particle)))
             res_particle_list.append(tuple(res_particle))
 
         print ("drawLine:" + str(tuple(res_line)))
@@ -148,6 +150,7 @@ class robot:
         BP.set_motor_dps(BP.PORT_B, speed_dps)
         target_rotation = get_rotation_amount(rad_amount)
         # print("target rotation %s" % target_rotation)
+        print("target_rotation %s\n" %target_rotation)
         while actual_degree < target_rotation:
             # Actual degree negate
             actual_degree = -BP.get_motor_encoder(BP.PORT_B)
@@ -165,27 +168,33 @@ class robot:
     #    2 - go straight.
     def navigate_to_waypoint(self, x, y):
         # Compute coordinate differences.
-        x_diff = x - self.estimate_location[0]
-        y_diff = y - self.estimate_location[1]
+        
+        x_diff = 100 * x - self.estimate_location[0]
+        y_diff = 100 * y - self.estimate_location[1]
+        rotation_amount = 0;
         
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
-        if not (x_diff == 0) and (y_diff == 0) :
+        if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
         #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
-        elif (x_diff == 0) :
-            if (y_diff > 0):
-                #90-theta
-                rotation_amount = math.pi/2 - self.estimate_location[2]
+        elif (x_diff < 0.5 and x_diff > -0.5) :
+            if (y_diff <  0): # IMPORTANT, THIS IS FOR GRAPHICS BECAUSE THEIR Y IS UPSIDE DOWN
+                # 90 - theta
+                rotation_amount = math.pi / 2 - self.estimate_location[2]
             else:
-                #270-theta
-                rotation_amount = 3*math.pi/2 - self.estimate_location[2]
-        elif (y_diff == 0) :
-            if (x_diff > 0) :
+                # 270 - theta
+                rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
+        elif (y_diff < 0.5 and y_diff > -0.5) :
+            if (x_diff >= 0) :
+                rotation_amount = self.estimate_location[2]
+            else:
                 rotation_amount = - self.estimate_location[2]
-            else:
-                rotation_amount = math.pi - self.estimate_location[2]
+        
+       # if(rotation_amount >= math.pi * 2):
+        #    rotation_amount = rotation_amount - math.pi * 2
             
         # Step1: rotation.
+        # print("rotation %s\n" %rotation_amount)
         self.rotate(rotation_amount, 90)       
         
         # Compute distance to travel.
@@ -196,6 +205,7 @@ class robot:
             distance_amount = -distance_amount
         
         # Step2: go forward.
+        # print("distance amount %s \n" % distance_amount);
         self.go_forward(distance_amount, 180, x, y)
         
         # Print particles and line status.
@@ -218,38 +228,11 @@ class robot:
 ##################################################
 
 try:
-    # Initialise a robot object.
     r = robot()
-    
-    # Coordinate's initial offset due to graphics.
-    x = 0
-    y = 0
-    
-    # Length of single step (so in this case square of 200x200).
-    offset = 10
-    offset_coefficient = 1    
-    
-    # Iterate four sides.
-    for i in range (4):
-        # Iterate 4 steps of a single side.
-        for j in range (4):
-            # Set coefficient accordingly.
-            if i > 1 :
-                offset_coefficient = -1
-            if not (i % 2):
-                x = x + offset * offset_coefficient
-            else :
-                y = y - offset * offset_coefficient
-            
-            # Move to the computed coordinates.
-            r.navigate_to_waypoint(x, y)
-            time.sleep(2)
-            
-        # Rotate left 90 degrees
-        r.rotate(math.pi / 2, 90)
-        time.sleep(2)
+    while(input("Do you want to move? Y/N\n") == "Y"):
+        coordinates = input("Specify coordinates x and y\n")
+        r.navigate_to_waypoint(coordinates[0], coordinates[1])
     r.stop_robot()
-    
 # Keyboard Interrupt.    
 except KeyboardInterrupt:
     r.stop_robot()
