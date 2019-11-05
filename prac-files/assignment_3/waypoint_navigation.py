@@ -148,7 +148,7 @@ class robot:
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-        target_rotation = get_rotation_amount(rad_amount)
+        target_rotation = get_rotation_amount(abs(rad_amount))
         # print("target rotation %s" % target_rotation)
         print("target_rotation %s\n" %target_rotation)
         while actual_degree < target_rotation:
@@ -170,7 +170,7 @@ class robot:
         # Compute coordinate differences.
         
         x_diff = 100 * x - self.estimate_location[0]
-        y_diff = 100 * y - self.estimate_location[1]
+        y_diff = self.estimate_location[1] - 100 * y
         rotation_amount = 0;
         
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
@@ -178,7 +178,7 @@ class robot:
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
         #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
         elif (x_diff < 0.5 and x_diff > -0.5) :
-            if (y_diff <  0): # IMPORTANT, THIS IS FOR GRAPHICS BECAUSE THEIR Y IS UPSIDE DOWN
+            if (y_diff >=  0): 
                 # 90 - theta
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
             else:
@@ -186,9 +186,9 @@ class robot:
                 rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
         elif (y_diff < 0.5 and y_diff > -0.5) :
             if (x_diff >= 0) :
-                rotation_amount = self.estimate_location[2]
-            else:
                 rotation_amount = - self.estimate_location[2]
+            else:
+                rotation_amount = math.pi - self.estimate_location[2]
         
        # if(rotation_amount >= math.pi * 2):
         #    rotation_amount = rotation_amount - math.pi * 2
@@ -199,6 +199,8 @@ class robot:
         
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
+
+	print("distance amount: %s", distance_amount)
         
         # Make the particles follow the line consistently.
         if x_diff > 0 :
@@ -228,11 +230,12 @@ class robot:
 ##################################################
 
 try:
-    r = robot()
-    while(input("Do you want to move? Y/N\n") == "Y"):
-        coordinates = input("Specify coordinates x and y\n")
-        r.navigate_to_waypoint(coordinates[0], coordinates[1])
-    r.stop_robot()
+    while(1):    
+	r = robot()
+    	x = input("Specify coordinate x\n")
+    	y = input("Specify coordinate y\n")
+    	r.navigate_to_waypoint(x, y)
+    	r.stop_robot()
 # Keyboard Interrupt.    
 except KeyboardInterrupt:
     r.stop_robot()
