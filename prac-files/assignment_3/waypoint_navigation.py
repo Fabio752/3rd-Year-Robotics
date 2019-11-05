@@ -20,11 +20,11 @@ class state:
     # Initialise member variables.
     # Note that 400,500 are the coordinates' initial offsets needed for displaying on the graphic interface. 
     def __init__(self):
-        self.line = [400, 500, 400,500]
+        self.line = [0,0,0,0]
         PARTICLE_SET = []
 
         for i in range(NUMBER_OF_PARTICLES):
-            particle = [400, 500, 0, general_weight]
+            particle = [0, 0, 0, general_weight]
             PARTICLE_SET.append(particle)
 
         self.PARTICLE_SET = PARTICLE_SET
@@ -69,8 +69,27 @@ class state:
     
     # Graphics.
     def print_set(self):
-        print ("drawLine:" + str(self.line))
-        print ("drawParticles:" + str(self.PARTICLE_SET))
+        scale = 10
+        res_line = [res*scale for res in self.line]
+        res_line[0] += 400
+        res_line[1] += 500
+        res_line[2] += 400
+        res_line[3] += 500
+
+        res_particle_list = []
+        for particle in self.PARTICLE_SET:
+            print("Before" + str(particle))
+            res_particle = [None, None, None]
+            res_particle[0] = particle[0]*scale +400
+            res_particle[1] = particle[1]*scale +500
+            res_particle[2] = particle[2]
+            print("After" + str(tuple(res_particle)))
+            res_particle_list.append(tuple(res_particle))
+
+
+
+        print ("drawLine:" + str(tuple(res_line)))
+        print ("drawParticles:" + str(res_particle_list))
 
         
 # A robot has a state and an estimated location.
@@ -195,11 +214,11 @@ try:
     r = robot()
     
     # Coordinate's initial offset due to graphics.
-    x = 400
-    y = 500
+    x = 0
+    y = 0
     
     # Length of single step (so in this case square of 200x200).
-    offset = 50
+    offset = 10
     offset_coefficient = 1    
     
     # Iterate four sides.
