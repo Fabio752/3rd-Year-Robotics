@@ -2,7 +2,8 @@ import brickpi3
 import time
 import random
 BP = brickpi3.BrickPi3()
-
+BP.set_motor_limits(BP.PORT_A, 70, 200)
+BP.set_motor_limits(BP.PORT_B, 70, 200)
 target_speed = 5
 
 # def get_encode_length(distance):
@@ -43,7 +44,9 @@ def set_speed(speed, dps):
     BP.set_motor_dps(BP.PORT_A, dps)
     BP.set_motor_dps(BP.PORT_B, dps)
 
-
+def clear_encoders():
+    BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
+    BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 # def rotate(degree_amount, speed_dps):
 # 	#Rotate robot left by 90 degrees
 # 	actual_degree = 0
@@ -67,7 +70,7 @@ def set_speed(speed, dps):
 BP.set_sensor_type(BP.PORT_3, BP.SENSOR_TYPE.TOUCH)
 BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.TOUCH)
 speed_dps = 50
-dps = 70
+dps = -170
 
 
 try:
@@ -89,8 +92,10 @@ try:
 
         if left_hit or right_hit:
             # go_forward(5, 50)
-            BP.set_motor_position(BP.PORT_A, -20)
-            BP.set_motor_position(BP.PORT_B, -20)
+            clear_encoders()
+            BP.set_motor_position(BP.PORT_A, 200)
+            BP.set_motor_position(BP.PORT_B, 200)
+            time.sleep(2)
             if left_hit and right_hit:
                 if bool(random.getrandbits(1)):
                 #    rotate(-360, 90)
@@ -99,14 +104,16 @@ try:
                 else:
                     left_hit = False
                     right_hit = True
+            clear_encoders()
             if left_hit:
                 # rotate(-360, 90)
-                BP.set_motor_position(BP.PORT_A, -90)
-                BP.set_motor_position(BP.PORT_B, 90)
-            elif right_hit:
-                # rotate(360, 90)
                 BP.set_motor_position(BP.PORT_A, 90)
                 BP.set_motor_position(BP.PORT_B, -90)
+            elif right_hit:
+                # rotate(360, 90)
+                BP.set_motor_position(BP.PORT_A, -90)
+                BP.set_motor_position(BP.PORT_B, 90)
+            time.sleep(2)
         time.sleep(0.02)
 
 except KeyboardInterrupt:

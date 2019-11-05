@@ -1,0 +1,6 @@
+SETTING UP THE ROBOT:
+  Left motor		Motor A
+  Right motor		Motor B
+  Left Touch sensor	Sensor 3
+  Right Touch sensor	Sensor 4
+  Ultrasonic sensor	Sensor 1 
