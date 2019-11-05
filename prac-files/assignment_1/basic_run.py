@@ -6,7 +6,7 @@ def get_encode_length(distance):
     return (distance/39.5)*819.5
 
 def stop_robot():
-    BP.reset_all()
+    BP.reset_all() 
     BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
     BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 
