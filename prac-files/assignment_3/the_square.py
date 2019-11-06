@@ -49,8 +49,8 @@ class state:
     def update_particle_set_line(self, mean_distance, stand_dev_distance, mean_angle, stand_dev_angle, distance):
         i = 0
         for particle in self.PARTICLE_SET:
-            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(math.pi + particle[2])
-            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(math.pi + particle[2])
+            x_new = particle[0] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.cos(particle[2])
+            y_new = particle[1] + (distance + random.gauss(mean_distance, stand_dev_distance)) * math.sin(particle[2])
             theta_new = particle[2] + random.gauss(mean_angle, stand_dev_angle)
             # We are currently not changing the weights.
             self.PARTICLE_SET[i] = (x_new, y_new, theta_new, particle[3])
@@ -74,20 +74,36 @@ class state:
         scale = 10
         res_line = [res * scale for res in self.line]
         res_line[0] += 400
-        res_line[1] += 500
+        res_line[1] = -res_line[1] + 500
         res_line[2] += 400
-        res_line[3] += 500
+        res_line[3] = -res_line[3] + 500
 
         res_particle_list = []
         for particle in self.PARTICLE_SET:
             # print("Before" + str(particle))
             res_particle = [None, None, None]
             res_particle[0] = particle[0] * scale + 400
-            res_particle[1] = particle[1] * scale + 500
+            res_particle[1] = -particle[##################################################
+#STARTING SCRIPT
+##################################################
+
+try:
+    r = robot()
+    while(1):    
+    	x = input("Specify coordinate x\n")
+    	y = input("Specify coordinate y\n")
+    	r.navigate_to_waypoint(x, y)
+    	r.stop_robot()
+# Keyboard Interrupt.    
+except KeyboardInterrupt:
+    r.stop_robot()1] * scale + 500
             res_particle[2] = particle[2]
             # print("After" + str(tuple(res_particle)))
             res_particle_list.append(tuple(res_particle))
-
+        print (res_line[0])
+        print(res_line[1])
+        print (res_line[2])
+        print(res_line[3])
         print ("drawLine:" + str(tuple(res_line)))
         print ("drawParticles:" + str(res_particle_list))
         
@@ -116,7 +132,7 @@ class robot:
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
         BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
         # Initializations.
-        target_degree_rotation = get_encode_length(abs(distance))
+        target_degree_rotation = get_encode_length(distance)
         actual_degree_rotation = 0
         BP.set_motor_dps(BP.PORT_A, speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
@@ -141,18 +157,23 @@ class robot:
 
     # Rotation on the spot.    
     def rotate(self, rad_amount, speed_dps):
+        #Go the quicket way around
+        if (abs(rad_amount) > math.pi):
+            rad_amount = 2*math.pi - abs(rad_amount)
         # Negate the speed.
-        speed_dps = -speed_dps
+        if(rad_amount >0):
+            speed_dps = -speed_dps
 
         # Rotate robot left by 90 degrees.
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
-        target_rotation = get_rotation_amount(rad_amount)
+        target_rotation = get_rotation_amount(abs(rad_amount))
         # print("target rotation %s" % target_rotation)
+        print("target_rotation %s\n" %target_rotation)
         while actual_degree < target_rotation:
             # Actual degree negate
-            actual_degree = -BP.get_motor_encoder(BP.PORT_B)
+            actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
             # print_robot_stats(BP.PORT_A)
             # print_robot_stats(BP.PORT_B)
             time.sleep(0.02)
@@ -167,6 +188,8 @@ class robot:
     #    2 - go straight.
     def navigate_to_waypoint(self, x, y):
         # Compute coordinate differences.
+        x = x * 100
+        y = y * 100
         x_diff = x - self.estimate_location[0]
         y_diff = y - self.estimate_location[1]
         rotation_amount = 0;
@@ -174,19 +197,22 @@ class robot:
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
         if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
+            if (x_diff < 0):
+                rotation_amount = rotation_amount + math.pi
         #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
         elif (x_diff < 0.5 and x_diff > -0.5) :
-            if (y_diff <  0): # IMPORTANT, THIS IS FOR GRAPHICS BECAUSE THEIR Y IS UPSIDE DOWN
-                #90-theta
+            if (y_diff >=  0): 
+                # 90 - theta
+                print(self.estimate_location[2])
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
             else:
-                #270-theta
+                # 270 - theta
                 rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
         elif (y_diff < 0.5 and y_diff > -0.5) :
             if (x_diff >= 0) :
-                rotation_amount = self.estimate_location[2]
-            else:
                 rotation_amount = - self.estimate_location[2]
+            else:
+                rotation_amount = math.pi - self.estimate_location[2]
         
        # if(rotation_amount >= math.pi * 2):
         #    rotation_amount = rotation_amount - math.pi * 2
@@ -198,10 +224,8 @@ class robot:
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
         
-        # Make the particles follow the line consistently.
-        if x_diff > 0 :
-            distance_amount = -distance_amount
-        
+        print("distance amount: %s", distance_amount)
+                
         # Step2: go forward.
         # print("distance amount %s \n" % distance_amount);
         self.go_forward(distance_amount, 180, x, y)
@@ -232,7 +256,7 @@ try:
     x = 0
     y = 0
     # Length of single step (so in this case square of 200x200).
-    offset = 10
+    offset = 0.1
     offset_coefficient = 1    
     # Iterate four sides.
     for i in range (4):
@@ -244,7 +268,7 @@ try:
             if not (i % 2):
                 x = x + offset * offset_coefficient
             else :
-                y = y - offset * offset_coefficient
+                y = y + offset * offset_coefficient
             # Move to the computed coordinates.
             r.navigate_to_waypoint(x, y)
             time.sleep(2)
