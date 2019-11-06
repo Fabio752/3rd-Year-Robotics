@@ -15,7 +15,7 @@ def get_encode_length(distance):
 
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
-    return (degree_amount / 144.7) * 360
+    return (degree_amount / 140.0) * 360
 
 # A state has a particle set and a line.
 class state:
@@ -83,20 +83,7 @@ class state:
             # print("Before" + str(particle))
             res_particle = [None, None, None]
             res_particle[0] = particle[0] * scale + 400
-            res_particle[1] = -particle[##################################################
-#STARTING SCRIPT
-##################################################
-
-try:
-    r = robot()
-    while(1):    
-    	x = input("Specify coordinate x\n")
-    	y = input("Specify coordinate y\n")
-    	r.navigate_to_waypoint(x, y)
-    	r.stop_robot()
-# Keyboard Interrupt.    
-except KeyboardInterrupt:
-    r.stop_robot()1] * scale + 500
+            res_particle[1] = -particle[1] * scale + 500
             res_particle[2] = particle[2]
             # print("After" + str(tuple(res_particle)))
             res_particle_list.append(tuple(res_particle))
