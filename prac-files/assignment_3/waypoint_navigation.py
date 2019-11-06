@@ -144,6 +144,9 @@ class robot:
 
     # Rotation on the spot.    
     def rotate(self, rad_amount, speed_dps):
+        #Go the quicket way around
+        if (abs(rad_amount) > math.pi):
+            rad_amount = 2*math.pi - abs(rad_amount)
         # Negate the speed.
         if(rad_amount >0):
             speed_dps = -speed_dps
@@ -181,7 +184,7 @@ class robot:
         # We need to find theta either way, so if x_diff is zero, we need to rotate by 
         if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
-            if (x < 0):
+            if (x_diff < 0):
                 rotation_amount = rotation_amount + math.pi
         #If the point lies in the same line, we can rotate by (-theta) in order to point in the right position
         elif (x_diff < 0.5 and x_diff > -0.5) :
@@ -215,7 +218,7 @@ class robot:
         self.go_forward(distance_amount, 180, x, y)
         
         # Print particles and line status.
-        self.state.print_set()
+        # self.state.print_set()
     
     # Debugging.
     def print_robot_stats(self, port):
