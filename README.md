@@ -1,4 +1,4 @@
-### Assignement 1
+### Assignment 1
 
 **Investigating And Understanding Motor Control**
 
@@ -68,7 +68,7 @@ Given the definition of the Covariance Matrix:
 --------------------------
 
 
-### Assignement 3 : Probabilistic Motion and Sensing
+### Assignment 3 : Probabilistic Motion and Sensing
 
 **Sonar Investigation**
 
