@@ -80,24 +80,56 @@ The distance the sensor displays in the example program is measured in cm, and e
 
 According to the specification of the sensor, the sensor is able to measure distances from 0 to 2.5 meters with a precision of +/-3 cm. Also, large-sized objects with hard surfaces provide the best readings. Objects made from soft fabrics, from curved objects (e.g. a ball), or from very thin and small objects can be diffi cult for the sensor to read.
 
+Minimum distance: 4cm
+Maximum distance: 165cm
+
 *2)Move the sonar so that it faces the wall at a non-orthogonal incidence angle. What is the maximum angular deviation from perpendicular to the wall at which it will still give sensible readings?*
 
-Approximately 15 degrees - 30 degrees (expand on this tomorrow)
+We placed the robot at a fixed distance of 30 cm from an arbitrary point on the wall. Varying the angle, we made the following measurements:
+
+|Angle (degrees)| Measurement(cm) | % Error|
+|---|---|---|
+| 0 | 30 | | 0 |
+| 15 | 29 | 3.3 |
+| 20 | 29 | 3.3 |
+| 25 | 28 | 6.6 |
+| 30 | 26 | 13.2 |
+| 45 | 24 | 20 |
+| 50 | 22 | 26.4 |
+| 55 | 21 | 30 |
+| 60 | 255 | NA |
+
+If we set the threshold for "sensibility" to be that readings must be within an accuracy of 5% of the ground truth, we can observe that the maximum acceptable angular deviation is between 20 - 25 degrees. Due to human and environmental errors we were unable to obtain a tighter bound on this. Maximum deviation also depends on the threshold used to define "sensible".
+
 
 *3)Do your sonar depth measurements have any systematic (non-zero mean) errors? To test this, set up the sensor at a range of hand-measured depths (20cm, 40cm, 60cm, 80cm, 100cm) from a wall and record depth readings. Are they consistently above or below what they should be?*
 
-Readings are in the txt files. (Need to change them in order to have something to discuss, done tomorrow)
+Readings are in the txt files, created by piping output of th eexample NXT-ultrasonic program. Doing some simple statistical analysis, we obtained the following results.
 
-As mentioned before the specification sets the uncertainty of measurement at +-3cm, which deviates from our experimental measurements by (...) (fill tomorrow)
+|Distance(cm)| Measurement average(cm) | Measured standard deviation(cm) | % inaccuracy (based on mean) |
+|---|---|---|---|
+| 20 |
+| 40 |
+| 60 |
+| 80 | 
+| 100 |
+
 
 
 *4)What is the the accuracy of the sonar sensor and does it depend on depth? At each of two chosen hand-measured depths (40cm and 100cm), make 10 separate depth measurements (each time picking up and replacing the sensor) and record the values. Do you observe the same level of scatter in each case?*
 
-(Again, need to take the new set of measurements tomorrow)
+The sonar sensor does not seem to have a fixed percentage accuracy - there is however a +-1cm error to be expected in the measurement of all distances <150cm (based on our observations). 
+
+Readings obtianed for gound truth of 40cm: (40, 39, 39, 40, 40, 40, 40, 40, 40, 41)
+Readings obtained for ground truth of 100cm: (100, 100, 99, 99, 99, 99, 99, 99, 101, 101)
+
+There seens to be a slightly greater spread for the 100cm ground truth case, but again this can be put down to environmental and human factors. The absolute error in both cases is 1cm, which corresponds to 2.5% in the 40cm case and 1% in the 100cm case.
 
 *5)In a range of general conditions for robot navigation, what fraction of the time do you think your sonar gives garbage readings very far from ground truth?*
 
-When the robot is stationary, the chance of the robot returning garbage/incorrect values is almost nothing, as can be seen by some of our text output files. On the other hand, when the robot is in motion (... this needs to be tested as well.. )
+The accuracy of robot naviagtion depends on the environment it is placed in. If the environment is such that conditions are changing (through the presence of other bodies/moving objects/EM interference), or that there are points in the environment that exceed the Sonar's threshold for reliable readings (ie some walls are more than 165 cm away, while some objects are <4 cm to the robot), then the percentage of time that the robot is exposed to these conditions would correspond with the fraction of time that the sonar gives garbage readings. 
+
+However, in a closed and reasonable environment (reasonable relative to the quality of hardware available to us) we can safely assume that the sonar will not give garbage values. There may be some slight deviation from gound truth (as explored above) but this can be mitigated with software.
 
 
 
