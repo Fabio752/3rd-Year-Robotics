@@ -77,25 +77,32 @@ class state:
         #z = sonar measurement
 
         #Find out which wall the sonar should be pointing to, and the expected distance m
-        
-        # Line of sight will interesect with wall
-        # Find equation of line of sight
-        # y = m(x-x_0) + y_0 where m is theta, (x_0, y_0) is the current pos of robot
-        # los_y = lambda in_x: theta(in_x - x) + y
-        # los_x = lambda in_y: (in_y - y)/m + x if m != 0 else x
-        # for wall in world_map.Map.walls:
-        #     #If the lines intersect, then we can equate them
-        #     spec_x = 0
-        #     grad = (wall[3] - wall[1])/(wall[2] = wall[0])
-        #     wall_y = grad*(spec_x - wall[0]) + wall[1]
-        
-        #Once wall is found, compute m
-        chosen_wall = (84,210,168,210) #Dummy, need to find wall first
-        # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
-        m = ((chosen_wall[3] - chosen_wall[1])*(chosen_wall[0] - x) - (chosen_wall[2] - chosen_wall[0])*(chosen_wall[1] - y)) /\
-            ((chosen_wall[3] - chosen_wall[1])*math.cos(theta) - (chosen_wall[2] - chosen_wall[0])*math.sin(theta))
+        min_distance = 255
+        chosen_wall = None
+        chosen_wall_m = None
+        for wall in world_map.Map.walls:
+            #Compute m
+            # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
+            m = ((wall[3] - wall[1])*(wall[0] - x) - (wall[2] - wall[0])*(wall[1] - y)) /\
+                ((wall[3] - wall[1])*math.cos(theta) - (wall[2] - wall[0])*math.sin(theta))
+
+            #Compute intersect x and y to wall
+            intersect_x = x + m*math.cos(theta)
+            intersect_y = y + m*math.sin(theta)
+
+            #Sub intersect x into wall equation to see if the correct y is found
+            wall_y = grad*(intersect_x - wall[0]) + wall[1]
+            if int(intersect_y) == int(wall_y):
+                #compute distance
+                distance = math.sqrt(math.pow(intersect_y-y,2) + math.pow(intersect_y,2))
+                #Choose closest wall
+                if distance < min_distance:
+                    chosen_wall = wall
+                    chosen_wall_m = m
+                    min_distance = distance
+
         #Return the new particle weight (acording to likelihood function)
-        return math.exp((-math.pow((z-m),2) / 2*math.pow(standard_dev,2)))
+        return math.exp((-math.pow((z-chosen_wall_m),2) / 2*math.pow(standard_dev,2)))
 
       # Graphics.
     def print_set(self):
