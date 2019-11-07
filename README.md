@@ -104,15 +104,15 @@ If we set the threshold for "sensibility" to be that readings must be within an 
 
 *3)Do your sonar depth measurements have any systematic (non-zero mean) errors? To test this, set up the sensor at a range of hand-measured depths (20cm, 40cm, 60cm, 80cm, 100cm) from a wall and record depth readings. Are they consistently above or below what they should be?*
 
-Readings are in the txt files, created by piping output of th eexample NXT-ultrasonic program. Doing some simple statistical analysis, we obtained the following results.
+Readings are in the txt files, created by piping output of the example NXT-ultrasonic program. By performind simple statistical analysis on all 120 readings per distance amount, we obtained the following results.
 
-|Distance(cm)| Measurement average(cm) | Measured standard deviation(cm) | % inaccuracy (based on mean) |
+|Distance(cm)| Measurement average(cm) (1dp) | Measured standard deviation(cm) | % inaccuracy (based on mean) |
 |---|---|---|---|
-| 20 |
-| 40 |
-| 60 |
-| 80 | 
-| 100 |
+| 20 | 20.0 | 0 | 0 |
+| 40 | 40.0 | 0.05 | 0 | 
+| 60 | 60.0 | 0.07 | 0 |
+| 80 | 80.0 | 0.09 | 0 |
+| 100 | 100.9 | 0.29 | 0.91 |
 
 
 
