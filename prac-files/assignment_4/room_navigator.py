@@ -100,6 +100,8 @@ class state:
                     #Value is in range of previous particle
                     particle_idx = i - 1
             new_particle = copy.deepcopy(self.PARTICLE_SET[particle_idx])
+            #Reset weight
+            new_particle[3] = 1/NUMBER_OF_PARTICLES
             new_particle_set.append(new_particle)
         
         self.PARTICLE_SET = new_particle_set
@@ -127,6 +129,7 @@ class state:
             intersect_y = y + m*math.sin(theta)
 
             #Sub intersect x into wall equation to see if the correct y is found
+            grad = ((wall[3] - wall[1]) / (wall[2] - wall[0]))
             wall_y = grad*(intersect_x - wall[0]) + wall[1]
             if int(intersect_y) == int(wall_y):
                 #compute distance
@@ -278,7 +281,8 @@ class robot:
         self.go_forward(distance_amount, 180, x, y)
         
         # Print particles and line status.
-        self.state.print_set()
+        # self.state.print_set()
+        canvas.drawParticles(self.state.PARTICLE_SET)
     
     # Debugging Function.
     def print_robot_stats(self, port):
@@ -295,15 +299,47 @@ class robot:
 ##################################################
 #STARTING SCRIPT
 ##################################################
+waypoints = [\
+    (84, 30)\
+    (180, 30)\
+    (180, 54)\
+    (138, 54)\
+    (138, 168)\
+    (114, 168)\
+    (114, 84)\
+    (84, 84)\
+    (84, 30)\
+    ]
+
+canvas = world_map.Canvas() 	# global canvas we are going to draw on
+
+mymap = world_map.Map() 
+# Definitions of walls
+# a: O to A
+# b: A to B
+# c: C to D
+# d: D to E
+# e: E to F
+# f: F to G
+# g: G to H
+# h: H to O
+mymap.add_wall((0,0,0,168))         # a
+mymap.add_wall((0,168,84,168))      # b
+mymap.add_wall((84,126,84,210))     # c
+mymap.add_wall((84,210,168,210))    # d
+mymap.add_wall((168,210,168,84))    # e
+mymap.add_wall((168,84,210,84))     # f
+mymap.add_wall((210,84,210,0))      # g
+mymap.add_wall((210,0,0,0))         # h
+mymap.draw() 
 
 try:
     # Keep inputting coordinates, the robot will go there.
     r = robot()
-    while(1):    
-    	x = input("Specify coordinate x\n")
-    	y = input("Specify coordinate y\n")
+    for x,y in waypoints:    
     	r.navigate_to_waypoint(x, y)
     	r.stop_robot()
+        time.sleep(2)
 
 # Keyboard Interrupt.    
 except KeyboardInterrupt:
