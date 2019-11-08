@@ -4,6 +4,7 @@ import brickpi3
 import time
 import random
 import math
+import copy
 import particleDataStructures as world_map #Contains lib for the preset environment and displaying of particles in map
 
 BP = brickpi3.BrickPi3()
@@ -67,13 +68,48 @@ class state:
             self.PARTICLE_SET[i] = (particle[0], particle[1], theta_new, particle[3])
             i = i + 1
     
+    #Weight updater.
+    def update_particle_set_weights(self, sonar_measurement):
+        total_weight_sum = 0
+        for particle in self.PARTICLE_SET:
+            new_weight = calculate_likelihood(particle[0], particle[1], particle [2], sonar_measurement)
+            total_weight_sum += new_weight
+            particle[3] = new_weight
+
+        #Normalise
+        for particle in self.PARTICLE_SET:
+            particle[3] = particle[3]/total_weight_sum
+    
+    #Resampling of particles
+    def resample_particle_set(self):
+        new_particle_set = []
+        #Create cumulative weight array
+        cumulative_weight = 0
+        cumulative_weight_arr = []
+        for particle in self.PARTICLE_SET:
+            cumulative_weight += particle[3]
+            cumulative_weight_arr.append(cumulative_weight)
+
+        #Use random num gen to pick particle
+        for i in range(len(self.PARTICLE_SET)):
+            rand_num = random.uniform[0,1]
+            # Binary search for index of corresponding particle
+            particle_idx = None
+            for i in range(1, len(cumulative_weight_arr)):
+                if rand_num < cumulative_weight_arr[i]:
+                    #Value is in range of previous particle
+                    particle_idx = i - 1
+            new_particle = copy.deepcopy(self.PARTICLE_SET[particle_idx])
+            new_particle_set.append(new_particle)
+        
+        self.PARTICLE_SET = new_particle_set
     # Line updater.
     def update_line(self, final_x, final_y):
         self.line = (self.line[2], self.line[3], final_x, final_y)
     
 
     # Update particle weights (using likelihood).
-    def calculate_likelihood(x, y, theta, z):
+    def calculate_likelihood(self, x, y, theta, z):
         #z = sonar measurement
 
         #Find out which wall the sonar should be pointing to, and the expected distance m
@@ -100,9 +136,15 @@ class state:
                     chosen_wall = wall
                     chosen_wall_m = m
                     min_distance = distance
-
+        #Compute the angle between the sonar direction and the normal to the wall
+        # sonar_normal_angle = math.acos( \
+        #     (math.cos(theta)*(chosen_wall[1] - chosen_wall[3]) + math.sin(theta) * (chosen_wall[2] - chosen_wall[0]))/\
+        #     (math.sqrt(math.pow(chosen_wall[1]-chosen_wall[3],2) + math.pow(chosen_wall[2] - chosen_wall[0],2))) )
+        # #If the sonar angle is too great, ignore
+        # if sonar_normal_angle > 0.4: #Limit in radians
+        #     return None
         #Return the new particle weight (acording to likelihood function)
-        return math.exp((-math.pow((z-chosen_wall_m),2) / 2*math.pow(standard_dev,2)))
+        return math.exp((-math.pow((z-chosen_wall_m),2) / 2*math.pow(standard_dev,2))) + 1 #Offset to make robust likelihood
 
       # Graphics.
     def print_set(self):
@@ -133,6 +175,8 @@ class robot:
     def __init__(self):
         self.state = state()
         self.set_estimate_location()
+        #Initialise sonar sensor
+        BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
     # Getters and setters.    
     def get_estimate_location(self):
@@ -159,11 +203,12 @@ class robot:
         
         while actual_degree_rotation < target_degree_rotation:
             actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B)) / 2
-            time.sleep(0.02)        
+            time.sleep(0.02)
 
         # Update particle set.
         self.state.update_line(final_x, final_y)
         self.state.update_particle_set_line(0, 1, 0, 0.01, distance)
+        self.state.update_particle_set_weights(BP.get_sensor(BP.PORT_1))
         
         # Update robot position and orientation estimates.
         self.set_estimate_location()
