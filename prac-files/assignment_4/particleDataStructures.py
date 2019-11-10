@@ -34,11 +34,11 @@ class Canvas:
         y1 = self.__screenY(line[1]) 
         x2 = self.__screenX(line[2]) 
         y2 = self.__screenY(line[3]) 
-        print ("drawLine:" + str((x1,y1,x2,y2)))
+        print "drawLine:" + str((x1,y1,x2,y2))
 
     def drawParticles(self,data):
         display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data] 
-        print ("drawParticles:" + str(display)) 
+        print "drawParticles:" + str(display) 
 
     def __screenX(self,x):
         return (x + self.margin)*self.scale
