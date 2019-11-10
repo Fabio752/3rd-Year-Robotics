@@ -1,13 +1,11 @@
 
 # Imports.
-print("wtf")
 import brickpi3
 import time
 import random
 import math
 import copy
-import particleDataStructures as world_map #Contains lib for the preset environment and displaying of particles in map
-print("hi anoubi")
+
 BP = brickpi3.BrickPi3()
 NUMBER_OF_PARTICLES = 100
 general_weight = 1/NUMBER_OF_PARTICLES
@@ -20,6 +18,45 @@ def get_encode_length(distance):
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
     return (degree_amount / 144.7) * 360
+
+class Canvas:
+    def __init__(self,map_size=210):
+        self.map_size    = map_size     # in cm 
+        self.canvas_size = 768          # in pixels 
+        self.margin      = 0.05*map_size 
+        self.scale       = self.canvas_size/(map_size+2*self.margin) 
+
+    def drawLine(self,line):
+        x1 = self.__screenX(line[0]) 
+        y1 = self.__screenY(line[1]) 
+        x2 = self.__screenX(line[2]) 
+        y2 = self.__screenY(line[3]) 
+        print ("drawLine:" + str((x1,y1,x2,y2)))
+
+    def drawParticles(self,data):
+        display = [(self.__screenX(d[0]),self.__screenY(d[1])) + d[2:] for d in data] 
+        print ("drawParticles:" + str(display)) 
+
+    def __screenX(self,x):
+        return (x + self.margin)*self.scale
+
+    def __screenY(self,y):
+        return (self.map_size + self.margin - y)*self.scale
+
+# A Map class containing walls
+class Map:
+    def __init__(self):
+        self.walls = [] 
+
+    def add_wall(self,wall):
+        self.walls.append(wall) 
+
+    def clear(self):
+        self.walls = [] 
+
+    def draw(self):
+        for wall in self.walls:
+            canvas.drawLine(wall) 
 
 # A state has a particle set and a line.
 class state:
@@ -119,7 +156,7 @@ class state:
         min_distance = 255
         chosen_wall = None
         chosen_wall_m = None
-        for wall in world_map.Map.walls:
+        for wall in Map.walls:
             #Compute m
             # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
             m = ((wall[3] - wall[1])*(wall[0] - x) - (wall[2] - wall[0])*(wall[1] - y)) /\
@@ -291,8 +328,8 @@ class robot:
 #     ]
 
 waypoints = [(0,1),(1,1),(-1,1)]
-canvas = world_map.Canvas() 	# global canvas we are going to draw on
-mymap = world_map.Map() 
+canvas = Canvas() 	# global canvas we are going to draw on
+mymap = Map() 
 # Definitions of walls for test
 # a: O to A
 # b: A to B
