@@ -1,12 +1,13 @@
 
 # Imports.
+print("wtf")
 import brickpi3
 import time
 import random
 import math
 import copy
 import particleDataStructures as world_map #Contains lib for the preset environment and displaying of particles in map
-
+print("hi anoubi")
 BP = brickpi3.BrickPi3()
 NUMBER_OF_PARTICLES = 100
 general_weight = 1/NUMBER_OF_PARTICLES
@@ -290,9 +291,7 @@ class robot:
 #     ]
 
 waypoints = [(0,1),(1,1),(-1,1)]
-
 canvas = world_map.Canvas() 	# global canvas we are going to draw on
-
 mymap = world_map.Map() 
 # Definitions of walls for test
 # a: O to A
@@ -320,9 +319,11 @@ mymap.draw()
 try:
     # Keep inputting coordinates, the robot will go there.
     r = robot()
-    for x,y in waypoints:    
-    	r.navigate_to_waypoint(x, y)
-    	r.stop_robot()
+    print("about to navigate")
+    for x,y in waypoints:
+        r.navigate_to_waypoint(x, y)
+        print("navigated")
+        r.stop_robot()
         time.sleep(2)
 
 # Keyboard Interrupt.    
