@@ -312,7 +312,6 @@ mymap = world_map.Map()
 # mymap.add_wall((210,84,210,0))      # g
 # mymap.add_wall((210,0,0,0))         # h
 # mymap.draw() 
-
 #Our test walls
 mymap.add_wall((-41.5,-100,-41.5,100))
 mymap.add_wall((-100,47.5,100,47.5))
