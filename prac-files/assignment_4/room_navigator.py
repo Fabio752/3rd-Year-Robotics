@@ -72,7 +72,7 @@ class state:
     def update_particle_set_weights(self, sonar_measurement):
         total_weight_sum = 0
         for particle in self.PARTICLE_SET:
-            new_weight = calculate_likelihood(particle[0], particle[1], particle [2], sonar_measurement)
+            new_weight = particle[3] * calculate_likelihood(particle[0], particle[1], particle [2], sonar_measurement)
             total_weight_sum += new_weight
             particle[3] = new_weight
 
@@ -149,28 +149,6 @@ class state:
         #Return the new particle weight (acording to likelihood function)
         return math.exp((-math.pow((z-chosen_wall_m),2) / 2*math.pow(standard_dev,2))) + 1 #Offset to make robust likelihood
 
-      # Graphics.
-    def print_set(self):
-        # Initialise scaling values.
-        scale = 10
-        res_line = [res * scale for res in self.line]
-        res_line[0] += 400
-        res_line[1] += 500
-        res_line[2] += 400
-        res_line[3] += 500
-
-        res_particle_list = []
-        for particle in self.PARTICLE_SET:
-            # print("Before" + str(particle))
-            res_particle = [None, None, None]
-            res_particle[0] = particle[0] * scale + 400
-            res_particle[1] = particle[1] * scale + 500
-            res_particle[2] = particle[2]
-            # print("After" + str(tuple(res_particle)))
-            res_particle_list.append(tuple(res_particle))
-
-        print ("drawLine:" + str(tuple(res_line)))
-        print ("drawParticles:" + str(res_particle_list))
         
 # A robot has a state and an estimated location.
 class robot:
@@ -194,6 +172,7 @@ class robot:
     # Motion functions.
     # Straight motion.
     def go_forward(self, distance, speed_dps, final_x, final_y):
+        sonar_offset = 7.5
         # Negating speed.
         speed_dps = -speed_dps
         BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
@@ -211,7 +190,7 @@ class robot:
         # Update particle set.
         self.state.update_line(final_x, final_y)
         self.state.update_particle_set_line(0, 1, 0, 0.01, distance)
-        self.state.update_particle_set_weights(BP.get_sensor(BP.PORT_1))
+        self.state.update_particle_set_weights(BP.get_sensor(BP.PORT_1) + sonar_offset)
         
         # Update robot position and orientation estimates.
         self.set_estimate_location()
@@ -281,7 +260,6 @@ class robot:
         self.go_forward(distance_amount, 180, x, y)
         
         # Print particles and line status.
-        # self.state.print_set()
         canvas.drawParticles(self.state.PARTICLE_SET)
     
     # Debugging Function.
@@ -299,22 +277,24 @@ class robot:
 ##################################################
 #STARTING SCRIPT
 ##################################################
-waypoints = [\
-    (84, 30)\
-    (180, 30)\
-    (180, 54)\
-    (138, 54)\
-    (138, 168)\
-    (114, 168)\
-    (114, 84)\
-    (84, 84)\
-    (84, 30)\
-    ]
+# waypoints = [\
+#     (84, 30),\
+#     (180, 30),\
+#     (180, 54),\
+#     (138, 54),\
+#     (138, 168),\
+#     (114, 168),\
+#     (114, 84),\
+#     (84, 84),\
+#     (84, 30)\
+#     ]
+
+waypoints = [(0,1),(1,1),(-1,1)]
 
 canvas = world_map.Canvas() 	# global canvas we are going to draw on
 
 mymap = world_map.Map() 
-# Definitions of walls
+# Definitions of walls for test
 # a: O to A
 # b: A to B
 # c: C to D
@@ -323,15 +303,19 @@ mymap = world_map.Map()
 # f: F to G
 # g: G to H
 # h: H to O
-mymap.add_wall((0,0,0,168))         # a
-mymap.add_wall((0,168,84,168))      # b
-mymap.add_wall((84,126,84,210))     # c
-mymap.add_wall((84,210,168,210))    # d
-mymap.add_wall((168,210,168,84))    # e
-mymap.add_wall((168,84,210,84))     # f
-mymap.add_wall((210,84,210,0))      # g
-mymap.add_wall((210,0,0,0))         # h
-mymap.draw() 
+# mymap.add_wall((0,0,0,168))         # a
+# mymap.add_wall((0,168,84,168))      # b
+# mymap.add_wall((84,126,84,210))     # c
+# mymap.add_wall((84,210,168,210))    # d
+# mymap.add_wall((168,210,168,84))    # e
+# mymap.add_wall((168,84,210,84))     # f
+# mymap.add_wall((210,84,210,0))      # g
+# mymap.add_wall((210,0,0,0))         # h
+# mymap.draw() 
+
+#Our test walls
+mymap.add_wall((-41.5,-100,-41.5,100))
+mymap.add_wall((-100,47.5,100,47.5))
 
 try:
     # Keep inputting coordinates, the robot will go there.
