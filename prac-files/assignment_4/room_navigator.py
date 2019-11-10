@@ -315,6 +315,7 @@ mymap = world_map.Map()
 #Our test walls
 mymap.add_wall((-41.5,-100,-41.5,100))
 mymap.add_wall((-100,47.5,100,47.5))
+mymap.draw() 
 
 try:
     # Keep inputting coordinates, the robot will go there.
