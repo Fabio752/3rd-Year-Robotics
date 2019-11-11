@@ -1,6 +1,6 @@
 
 # Imports.
-import brickpi3
+import brickpi333 as brickpi3
 import time
 import random
 import math
@@ -8,16 +8,16 @@ import copy
 
 BP = brickpi3.BrickPi333()
 #Initialise sonar sensor
-BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
-standard_dev_distance = 5 #1
-standard_dev_angle = 0.015 #0.015
-likelihood_standard_dev = 3
+standard_dev_distance = 5 # previously set to 1 (higher in order to show MCL working)
+standard_dev_angle = 0.015 # previously set to 0.015
+likelihood_standard_dev = 2
 CARPET = "doc"
-USE_MCL = False
-INITIAL_POSITION = [0, 0, 0]
+USE_MCL = True
+INITIAL_POSITION = [0, 0, 0] # assessment done on a robot starting not from the origin
 
 # General purpose functions.
 def get_encode_length(distance):
@@ -27,6 +27,7 @@ def get_rotation_amount (rad):
     degree_amount = rad * 57.296
     return (degree_amount / 144.7) * 360 if CARPET == "doc" else (degree_amount / 135.0) * 360
 
+# Canvas of the environment
 class Canvas:
     def __init__(self, map_size = 210):
         self.map_size    = map_size     # in cm
@@ -114,9 +115,9 @@ class state:
             self.PARTICLE_SET[i] = (particle[0], particle[1], theta_new, particle[3])
             i = i + 1
 
-    #Weight updater.
+    # Weight updater.
     def update_particle_set_weights(self, robo_map, sonar_measurement):
-        print("Sonar measurement ", sonar_measurement)
+        # print("Sonar measurement ", sonar_measurement)
         total_weight_sum = 0
         for i in range(len(self.PARTICLE_SET)):
             particle = self.PARTICLE_SET[i]
@@ -127,17 +128,17 @@ class state:
             particle = (particle[0], particle[1], particle[2], new_weight)
             self.PARTICLE_SET[i] = particle
 
-        #Normalise
+        # Normalise
         for i in range(len(self.PARTICLE_SET)):
             particle = self.PARTICLE_SET[i]
             particle = (particle[0], particle[1], particle[2], particle[3] / total_weight_sum)
             self.PARTICLE_SET[i] = particle
-            print("new rescaled weight = ", particle[3])
+            # print("new rescaled weight = ", particle[3])
 
-    #Resampling of particles
+    # Resampling of particles
     def resample_particle_set(self):
         new_particle_set = []
-        #Create cumulative weight array
+        # Create cumulative weight array
         cumulative_weight = 0
         cumulative_weight_arr = []
         for particle in self.PARTICLE_SET:
@@ -147,16 +148,15 @@ class state:
 
         #Use random num gen to pick particle
         for i in range(len(self.PARTICLE_SET)):
-            rand_num = random.uniform(0,1)
+            rand_num = random.uniform(0, 1)
             # print("random_num", rand_num)
-            # Binary search for index of corresponding particle
             particle_idx = None
             for j in range(0, len(cumulative_weight_arr)):
                 if rand_num < cumulative_weight_arr[j]:
-                    #Value is in range of previous particle
+                    # Value is in range of previous particle
                     particle_idx = j
                     break
-            #Reset weight
+            # Reset weight
             # print("Old particle chosen: ", particle_idx)
             old_particle = self.PARTICLE_SET[particle_idx]
             new_particle = (old_particle[0], old_particle[1], old_particle[2], 1/NUMBER_OF_PARTICLES)
@@ -170,28 +170,28 @@ class state:
 
     # Update particle weights (using likelihood).
     def calculate_likelihood(self, robo_map, x, y, theta, z):
-        #z = sonar measurement
+        # z = sonar measurement
 
-        #Find out which wall the sonar should be pointing to, and the expected distance m
+        # Find out which wall the sonar should be pointing to, and the expected distance m
         min_distance = 255
         chosen_wall_m = None
         for wall in robo_map.walls:
-            #Compute m
+            # Compute m
             # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
             m = ((wall[3] - wall[1]) * (wall[0] - x) - (wall[2] - wall[0]) * (wall[1] - y)) /\
-                ((wall[3] - wall[1])*math.cos(theta) - (wall[2] - wall[0]) * math.sin(theta))
-            #print("Wall: ",wall,"m: ",m)
-            #Compute intersect x and y to wall
+                ((wall[3] - wall[1]) * math.cos(theta) - (wall[2] - wall[0]) * math.sin(theta))
+            # print("Wall: ",wall,"m: ",m)
+            # Compute intersect x and y to wall
             intersect_x = x + m * math.cos(theta)
             intersect_y = y + m * math.sin(theta)
 
-            #Sub intersect x into wall equation to see if the correct y is found
-            #grad = ((wall[3] - wall[1]) / (wall[2] - wall[0])) if wall[2] - wall[0]
-            #wall_y = grad*(intersect_x - wall[0]) + wall[1]
+            # Sub intersect x into wall equation to see if the correct y is found
+            # grad = ((wall[3] - wall[1]) / (wall[2] - wall[0])) if wall[2] - wall[0]
+            # wall_y = grad*(intersect_x - wall[0]) + wall[1]
             intersects = False
             if m > 0:
                 if wall[2] - wall[0] == 0:
-                    #Is vertical wall
+                    # Is vertical wall
                     intersects = (intersect_y < max(wall[1], wall[3]) and intersect_y > min (wall[1], wall[3]))
                 else:
                     intersects = (intersect_x < max(wall[0],wall[2]) and intersect_x > min(wall[0], wall[2]))
@@ -210,9 +210,9 @@ class state:
         #     return None
         # Return the new particle weight (acording to likelihood function)
         if chosen_wall_m is not None:
-            print("Difference: ", z - chosen_wall_m)
-            value = math.exp(- math.pow((z - chosen_wall_m), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 1 #Offset to make robust likelihood
-            print("likelihood value", value)
+            # print("Difference: ", z - chosen_wall_m)
+            value = math.exp(- math.pow((z - chosen_wall_m), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 0.0001 #Offset to make robust likelihood
+            # print("likelihood value", value)
             return value
         else:
             print ("Warning: no wall detected, weights will not be updated")
@@ -239,7 +239,7 @@ class robot:
 
     # Motion functions.
     # Straight motion.
-    def go_forward(self, distance, speed_dps, final_x, final_y, sonar_offset=7):
+    def go_forward(self, distance, speed_dps, final_x, final_y, sonar_offset = 7):
 
         # Negating speed.
         speed_dps = -speed_dps
@@ -261,9 +261,10 @@ class robot:
         self.state.update_particle_set_line(0, standard_dev_distance, 0, 0.01, distance)
         while USE_MCL:
             try:
-                BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                # Reset sensor type (hack to make it work)
+                BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
                 time.sleep(2)
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_1) + sonar_offset)
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_4) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError as e:
@@ -297,9 +298,10 @@ class robot:
         self.state.update_particle_set_angle(0, standard_dev_angle, rad_amount)
         while USE_MCL:
             try:
-                BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                # Reset sensor type (hack to make it work)
+                BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
                 time.sleep(2)
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_1) + sonar_offset)
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_4) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError:
@@ -380,7 +382,7 @@ class robot:
 #     (84, 30)\
 #     ]
 
-waypoints = [(0,0.1),(0.1,0.1),(0.1,0.15)]
+waypoints = [(0.1, 0),(0.2, 0)]
 # Definitions of walls for test
 # a: O to A
 # b: A to B
@@ -399,18 +401,17 @@ waypoints = [(0,0.1),(0.1,0.1),(0.1,0.15)]
 # mymap.add_wall((210,84,210,0))      # g
 # mymap.add_wall((210,0,0,0))         # h
 # mymap.draw()
-#Our test walls)
+#Our test walls
 
 try:
-    # Keep inputting coordinates, the robot will go there.
     r = robot()
     r.map.add_wall((-10,42,48,42))
     r.map.add_wall((48,-10,48,42))
     r.map.draw()
-    print("about to navigate")
+    # print("about to navigate")
     for x,y in waypoints:
         r.navigate_to_waypoint(x, y)
-        print("navigated")
+        # print("navigated")
         r.stop_robot()
         time.sleep(2)
 
