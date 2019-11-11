@@ -56,7 +56,7 @@ class Canvas:
 class Map:
     def __init__(self):
         self.walls = []
-        self.canvas = Canvas(50)
+        self.canvas = Canvas()
     def add_wall(self, wall):
         self.walls.append(wall)
 
@@ -122,7 +122,7 @@ class state:
         for i in range(len(self.PARTICLE_SET)):
             particle = self.PARTICLE_SET[i]
             weight_scale = self.calculate_likelihood(robo_map, particle[0], particle[1], particle[2], sonar_measurement)
-            new_weight = particle[3] * weight_scale if weight_scale is not None else particle[3]
+            new_weight = particle[3] * weight_scale
             # print("new weight %s, weight scale %s"% (new_weight, weight_scale))
             total_weight_sum += new_weight
             particle = (particle[0], particle[1], particle[2], new_weight)
@@ -174,7 +174,7 @@ class state:
 
         # Find out which wall the sonar should be pointing to, and the expected distance m
         min_distance = 255
-        chosen_wall_m = None
+        chosen_wall = None #tuple of chosen wall + m value
         for wall in robo_map.walls:
             # Compute m
             # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
@@ -197,26 +197,27 @@ class state:
                     intersects = (intersect_x < max(wall[0],wall[2]) and intersect_x > min(wall[0], wall[2]))
             if intersects:
                 # Choose closest wall
-                if chosen_wall_m is None:
-                    chosen_wall_m = m
-                if m < chosen_wall_m:
-                    chosen_wall_m = m
-        # Compute the angle between the sonar direction and the normal to the wall
-        # sonar_normal_angle = math.acos( \
-        #     (math.cos(theta)*(chosen_wall[1] - chosen_wall[3]) + math.sin(theta) * (chosen_wall[2] - chosen_wall[0]))/\
-        #     (math.sqrt(math.pow(chosen_wall[1]-chosen_wall[3],2) + math.pow(chosen_wall[2] - chosen_wall[0],2))) )
-        # # If the sonar angle is too great, ignore
-        # if sonar_normal_angle > 0.4: #Limit in radians
-        #     return None
-        # Return the new particle weight (acording to likelihood function)
-        if chosen_wall_m is not None:
-            # print("Difference: ", z - chosen_wall_m)
-            value = math.exp(- math.pow((z - chosen_wall_m), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 0.0001 #Offset to make robust likelihood
+                if chosen_wall is None:
+                    chosen_wall = (wall[0],wall[1],wall[2],wall[3],m)
+                if m < chosen_wall[4]:
+                    chosen_wall = (wall[0],wall[1],wall[2],wall[3],m)
+
+        if chosen_wall is not None:
+            # print("Difference: ", z - chosen_wall[4])
+            # Compute the angle between the sonar direction and the normal to the wall
+            sonar_normal_angle = math.acos( \
+                (math.cos(theta)*(chosen_wall[1] - chosen_wall[3]) + math.sin(theta) * (chosen_wall[2] - chosen_wall[0]))/\
+                (math.sqrt(math.pow(chosen_wall[1]-chosen_wall[3],2) + math.pow(chosen_wall[2] - chosen_wall[0],2))) )
+            # If the sonar angle is too great, ignore
+            if sonar_normal_angle > 0.4: #Limit in radians
+                return 1 #Don't modify the particle weight
+            # Return the new particle weight (acording to likelihood function)
+            value = math.exp(- math.pow((z - chosen_wall[4]), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 0.0001 #Offset to make robust likelihood
             # print("likelihood value", value)
             return value
         else:
             print ("Warning: no wall detected, weights will not be updated")
-            return None
+            return 1
 
 # A robot has a state and an estimated location.
 class robot:
