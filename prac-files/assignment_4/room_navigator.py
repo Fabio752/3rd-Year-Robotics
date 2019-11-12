@@ -18,6 +18,7 @@ likelihood_standard_dev = 2
 CARPET = "doc"
 USE_MCL = True
 INITIAL_POSITION = [0, 0, 0] # assessment done on a robot starting not from the origin
+debug = False
 
 # General purpose functions.
 def get_encode_length(distance):
@@ -117,13 +118,15 @@ class state:
 
     # Weight updater.
     def update_particle_set_weights(self, robo_map, sonar_measurement):
-        # print("Sonar measurement ", sonar_measurement)
+        if debug:
+            print("Sonar measurement ", sonar_measurement)
         total_weight_sum = 0
         for i in range(len(self.PARTICLE_SET)):
             particle = self.PARTICLE_SET[i]
             weight_scale = self.calculate_likelihood(robo_map, particle[0], particle[1], particle[2], sonar_measurement)
             new_weight = particle[3] * weight_scale
-            # print("new weight %s, weight scale %s"% (new_weight, weight_scale))
+            if debug:
+                print("new weight %s, weight scale %s"% (new_weight, weight_scale))
             total_weight_sum += new_weight
             particle = (particle[0], particle[1], particle[2], new_weight)
             self.PARTICLE_SET[i] = particle
@@ -133,7 +136,8 @@ class state:
             particle = self.PARTICLE_SET[i]
             particle = (particle[0], particle[1], particle[2], particle[3] / total_weight_sum)
             self.PARTICLE_SET[i] = particle
-            # print("new rescaled weight = ", particle[3])
+            if debug:
+                print("new rescaled weight = ", particle[3])
 
     # Resampling of particles
     def resample_particle_set(self):
@@ -143,7 +147,8 @@ class state:
         cumulative_weight_arr = []
         for particle in self.PARTICLE_SET:
             cumulative_weight += particle[3]
-            # print("weight ", cumulative_weight)
+            if debug:
+                print("cumulative weight: ", cumulative_weight)
             cumulative_weight_arr.append(cumulative_weight)
 
         #Use random num gen to pick particle
@@ -157,7 +162,8 @@ class state:
                     particle_idx = j
                     break
             # Reset weight
-            # print("Old particle chosen: ", particle_idx)
+            if debug:
+                print("Old particle chosen: ", particle_idx)
             old_particle = self.PARTICLE_SET[particle_idx]
             new_particle = (old_particle[0], old_particle[1], old_particle[2], 1/NUMBER_OF_PARTICLES)
             new_particle_set.append(new_particle)
@@ -180,7 +186,8 @@ class state:
             # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
             m = ((wall[3] - wall[1]) * (wall[0] - x) - (wall[2] - wall[0]) * (wall[1] - y)) /\
                 ((wall[3] - wall[1]) * math.cos(theta) - (wall[2] - wall[0]) * math.sin(theta))
-            # print("Wall: ",wall,"m: ",m)
+            if debug:
+                print("Wall: ",wall,"m: ",m)
             # Compute intersect x and y to wall
             intersect_x = x + m * math.cos(theta)
             intersect_y = y + m * math.sin(theta)
@@ -203,17 +210,21 @@ class state:
                     chosen_wall = (wall[0],wall[1],wall[2],wall[3],m)
 
         if chosen_wall is not None:
-            # print("Difference: ", z - chosen_wall[4])
+            if debug:
+                print("Difference betweeen sensor and wall: ", z - chosen_wall[4])
             # Compute the angle between the sonar direction and the normal to the wall
             sonar_normal_angle = math.acos( \
                 (math.cos(theta)*(chosen_wall[1] - chosen_wall[3]) + math.sin(theta) * (chosen_wall[2] - chosen_wall[0]))/\
                 (math.sqrt(math.pow(chosen_wall[1]-chosen_wall[3],2) + math.pow(chosen_wall[2] - chosen_wall[0],2))) )
+            if debug:
+                print("sonar normal angle", sonar_normal_angle)
             # If the sonar angle is too great, ignore
             if sonar_normal_angle > 0.4: #Limit in radians
                 return 1 #Don't modify the particle weight
             # Return the new particle weight (acording to likelihood function)
             value = math.exp(- math.pow((z - chosen_wall[4]), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 0.0001 #Offset to make robust likelihood
-            # print("likelihood value", value)
+            if debug:
+                print("likelihood value", value)
             return value
         else:
             print ("Warning: no wall detected, weights will not be updated")
