@@ -7,26 +7,31 @@ import math
 import copy
 
 BP = brickpi3.BrickPi3()
-#Initialise sonar sensor
-BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.reset_all()
 
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
-standard_dev_distance = 10 # previously set to 1 (higher in order to show MCL working)
-standard_dev_angle = math.pi/8 # previously set to 0.015
+standard_dev_distance = 1 # previously set to 1 (higher in order to show MCL working
+standard_dev_angle = 0.015 # previously set to 0.015
 likelihood_standard_dev = 1
 CARPET = "doc"
-USE_MCL = False
+USE_MCL = True
 INITIAL_POSITION = [84,30, 0] # assessment done on a robot starting not from the origin
-debug = False
+debug = True
 
 # General purpose functions.
+def sensor_instantiation():
+    #Initialise sonar sensor
+    #BP.reset_all()
+    BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+
 def get_encode_length(distance):
     return (distance / 39.1) * 819.5
 
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
-    return (degree_amount / 144.7) * 360 if CARPET == "doc" else (degree_amount / 135.0) * 360
+    return (degree_amount / 144.7) * 360 if CARPET == "doc" else (degree_amount / 110.0) * 360
 
 # Canvas of the environment
 class Canvas:
@@ -119,14 +124,15 @@ class state:
     # Weight updater.
     def update_particle_set_weights(self, robo_map, sonar_measurement):
         if debug:
-            print("Sonar measurement ", sonar_measurement)
+            print("Sonar measurement(reading + offset) ", sonar_measurement)
         total_weight_sum = 0
         for i in range(len(self.PARTICLE_SET)):
             particle = self.PARTICLE_SET[i]
             weight_scale = self.calculate_likelihood(robo_map, particle[0], particle[1], particle[2], sonar_measurement)
             new_weight = particle[3] * weight_scale
             if debug:
-                print("new weight %s, weight scale %s"% (new_weight, weight_scale))
+                pass
+               # print("particle %s new weight %s, weight scaling %s"% (particle, new_weight, weight_scale))
             total_weight_sum += new_weight
             particle = (particle[0], particle[1], particle[2], new_weight)
             self.PARTICLE_SET[i] = particle
@@ -137,7 +143,8 @@ class state:
             particle = (particle[0], particle[1], particle[2], particle[3] / total_weight_sum)
             self.PARTICLE_SET[i] = particle
             if debug:
-                print("new rescaled weight = ", particle[3])
+                pass
+                #print(i, ": new rescaled weight = ", particle[3])
 
     # Resampling of particles
     def resample_particle_set(self):
@@ -147,8 +154,6 @@ class state:
         cumulative_weight_arr = []
         for particle in self.PARTICLE_SET:
             cumulative_weight += particle[3]
-            if debug:
-                print("cumulative weight: ", cumulative_weight)
             cumulative_weight_arr.append(cumulative_weight)
 
         #Use random num gen to pick particle
@@ -163,7 +168,8 @@ class state:
                     break
             # Reset weight
             if debug:
-                print("Old particle chosen: ", particle_idx)
+                pass
+                #print("Old particle chosen: ", particle_idx)
             old_particle = self.PARTICLE_SET[particle_idx]
             new_particle = (old_particle[0], old_particle[1], old_particle[2], 1/NUMBER_OF_PARTICLES)
             new_particle_set.append(new_particle)
@@ -187,7 +193,8 @@ class state:
             m = ((wall[3] - wall[1]) * (wall[0] - x) - (wall[2] - wall[0]) * (wall[1] - y)) /\
                 ((wall[3] - wall[1]) * math.cos(theta) - (wall[2] - wall[0]) * math.sin(theta))
             if debug:
-                print("Wall: ",wall,"m: ",m)
+                #print("Wall: ",wall,"m: ",m)
+                pass
             # Compute intersect x and y to wall
             intersect_x = x + m * math.cos(theta)
             intersect_y = y + m * math.sin(theta)
@@ -208,23 +215,30 @@ class state:
                     chosen_wall = (wall[0],wall[1],wall[2],wall[3],m)
                 if m < chosen_wall[4]:
                     chosen_wall = (wall[0],wall[1],wall[2],wall[3],m)
+                #debug print
+                if debug:
+                    #print("Chosen wall: ", chosen_wall)
+                    pass
 
         if chosen_wall is not None:
             if debug:
-                print("Difference betweeen sensor and wall: ", z - chosen_wall[4])
+                pass
+                #print("Difference betweeen sensor and m: ", z - chosen_wall[4])
             # Compute the angle between the sonar direction and the normal to the wall
             sonar_normal_angle = math.acos( \
                 (math.cos(theta)*(chosen_wall[1] - chosen_wall[3]) + math.sin(theta) * (chosen_wall[2] - chosen_wall[0]))/\
                 (math.sqrt(math.pow(chosen_wall[1]-chosen_wall[3],2) + math.pow(chosen_wall[2] - chosen_wall[0],2))) )
             if debug:
-                print("sonar normal angle", sonar_normal_angle)
+                pass
+                #print("sonar normal angle", sonar_normal_angle)
             # If the sonar angle is too great, ignore
             if sonar_normal_angle > 0.4: #Limit in radians
                 return 1 #Don't modify the particle weight
             # Return the new particle weight (acording to likelihood function)
             value = math.exp(- math.pow((z - chosen_wall[4]), 2) / (2 * math.pow(likelihood_standard_dev, 2))) + 0.0001 #Offset to make robust likelihood
             if debug:
-                print("likelihood value", value)
+                pass
+                #print("likelihood value", value)
             return value
         else:
             print ("Warning: no wall detected, weights will not be updated")
@@ -271,19 +285,24 @@ class robot:
         # Update particle set.
         self.state.update_line(final_x, final_y)
         self.state.update_particle_set_line(0, standard_dev_distance, 0, 0.01, distance)
+        
         while USE_MCL:
             try:
                 # Reset sensor type (hack to make it work)
-                BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                BP.reset_all()
+                BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
                 time.sleep(2)
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_4) + sonar_offset)
+                if debug:
+                    print("Sensor value", BP.get_sensor(BP.PORT_2))
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_2) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError as e:
                 print("Warning: IO Error, skipping MCL...")
                 print(e)
             except brickpi3.SensorError as e:
-                print(e)
+                #print(e)
+                pass
         # Update robot position and orientation estimates.
         self.set_estimate_location()
         self.stop_robot()
@@ -294,6 +313,8 @@ class robot:
         if(rad_amount > 0):
             speed_dps = -speed_dps
 
+        if debug:
+            print("rad amount: ", rad_amount)
         # Set opposite wheels speed.
         actual_degree = 0
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
@@ -307,19 +328,23 @@ class robot:
 
         self.stop_robot()
         # Update the particle set and location estimates.
+        #We should not randomize unless we are not using MCL
         self.state.update_particle_set_angle(0, standard_dev_angle, rad_amount)
         while USE_MCL:
             try:
                 # Reset sensor type (hack to make it work)
-                BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-                time.sleep(2)
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_4) + sonar_offset)
+                BP.reset_all()
+                BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                if debug:
+                    print("Sensor value: ", BP.get_sensor(BP.PORT_2))
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_2) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError:
                 print("Warning: IO Error, skipping MCL...")
             except brickpi3.SensorError as e:
-                print(e)
+                pass
+                #print(e)
         self.set_estimate_location()
 
     # Move to a specific coordinate by :
@@ -333,38 +358,42 @@ class robot:
         y_diff = y - self.estimate_location[1]
         rotation_amount = 0;
 
+        if debug:
+            print("xdiff: ", x_diff, "ydiff: ", y_diff, "self_estimate location (x,y,theta)", self.estimate_location)
         # Standard case, just compute the angle.
-        if not (x_diff < 0.5 and x_diff > -0.5) and not (y_diff < 0.5 and y_diff > -0.5) :
+        #TODO: Chance the thresholds to the unfinessed version
+        if not (x_diff < 3 and x_diff > -3) and not (y_diff < 3 and y_diff > -3) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
+            if debug:
+                print ("atan value (case x_diff small): ", rotation_amount)
             if (x < 0): # atan returns the wrong value if the angle is in the 2nd/4th quadrant.
                 rotation_amount = rotation_amount + math.pi
 
         # If the point lies roughly on the same line we have special cases.
         # Case on the same vertical.
-        elif (x_diff < 0.5 and x_diff > -0.5) :
+        elif (x_diff < 3 and x_diff > -3) :
             if (y_diff >=  0):
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
             else :
                 rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
 
         # Case on the same horizontal.
-        elif (y_diff < 0.5 and y_diff > -0.5) :
+        elif (y_diff < 3 and y_diff > -3) :
             if (x_diff >= 0) :
                 rotation_amount = - self.estimate_location[2]
             else:
                 rotation_amount = math.pi - self.estimate_location[2]
 
-        # Step1: rotate.
+        # Step1: rotate by the amount we are off by.
         self.rotate(rotation_amount, 90)
 
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
 
         # Step2: go forward.
-        # print("distance amount %s \n" % distance_amount);
         self.go_forward(distance_amount, 180, x, y)
-
-        # Print particles and line status.
+        time.sleep(1)
+        #recalculate particle distribution
         self.map.canvas.drawParticles(self.state.PARTICLE_SET)
 
     # Debugging Function.
@@ -394,7 +423,14 @@ class robot:
 #     (84, 30)\
 #     ]
 
-waypoints = [(1.8, 0.3),(1.8, 0.54),(1.38, 0.54), (1.38,1.68), (1.14, 1.68), (1.14, 0.84), (0.84,0.84), (0.84, 0.3)]
+waypoints = [(1.04,0.3), (1.24, 0.3), (1.44, 0.3), (1.64, 0.3), (1.8,0.3),
+        (1.8, 0.5), (1.8, 0.54),
+        (1.6, 0.54), (1.38, 0.54),
+        (1.38, 0.74), (1.38, 0.94), (1.38, 1.24), (1.38, 1.44), (1.38, 1.64), (1.38, 1.68),
+        (1.18, 1.68), (1.14, 1.68),
+        (1.14, 1.48), (1.14, 1.28), (1.14, 1.08), (1.14, 0.88), (1.14, 0.84),
+        (0.94, 0.84), (0.84, 0.84),
+        (0.84, 0.64), (0.84, 0.44), (0.84, 0.3)]
 # Definitions of walls for test
 # a: O to A
 # b: A to B
@@ -426,12 +462,18 @@ try:
     r.map.add_wall((210,84,210,0))
     r.map.add_wall((210,0,0,0))
     r.map.draw()
-    # print("about to navigate")
+
+    #Instantianting the sensor used
+    sensor_instantiation()
+
     for x,y in waypoints:
         r.navigate_to_waypoint(x, y)
-        # print("navigated")
+        print("-----------------------------------")
+        print("Navigated to", x, ",", y )
+        print("-----------------------------------")
         r.stop_robot()
-        time.sleep(2)
+        time.sleep(0.2)
+    r.stop_robot()
 
 # Keyboard Interrupt.
 except KeyboardInterrupt:
