@@ -1,23 +1,23 @@
 
 # Imports.
-import brickpi333 as brickpi3
+import brickpi3
 import time
 import random
 import math
 import copy
 
-BP = brickpi3.BrickPi333()
+BP = brickpi3.BrickPi3()
 #Initialise sonar sensor
 BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
-standard_dev_distance = 5 # previously set to 1 (higher in order to show MCL working)
-standard_dev_angle = 0.015 # previously set to 0.015
-likelihood_standard_dev = 2
+standard_dev_distance = 10 # previously set to 1 (higher in order to show MCL working)
+standard_dev_angle = math.pi/8 # previously set to 0.015
+likelihood_standard_dev = 1
 CARPET = "doc"
-USE_MCL = True
-INITIAL_POSITION = [0, 0, 0] # assessment done on a robot starting not from the origin
+USE_MCL = False
+INITIAL_POSITION = [84,30, 0] # assessment done on a robot starting not from the origin
 debug = False
 
 # General purpose functions.
@@ -394,7 +394,7 @@ class robot:
 #     (84, 30)\
 #     ]
 
-waypoints = [(0.1, 0),(0.2, 0)]
+waypoints = [(1.8, 0.3),(1.8, 0.54),(1.38, 0.54), (1.38,1.68), (1.14, 1.68), (1.14, 0.84), (0.84,0.84), (0.84, 0.3)]
 # Definitions of walls for test
 # a: O to A
 # b: A to B
@@ -417,8 +417,14 @@ waypoints = [(0.1, 0),(0.2, 0)]
 
 try:
     r = robot()
-    r.map.add_wall((-10,42,48,42))
-    r.map.add_wall((48,-10,48,42))
+    r.map.add_wall((0,0,0,168))
+    r.map.add_wall((0,168,84,168))
+    r.map.add_wall((84,126,84,210))
+    r.map.add_wall((84,210,168,210))
+    r.map.add_wall((168,210,168,84))
+    r.map.add_wall((168,84,210,84))
+    r.map.add_wall((210,84,210,0))
+    r.map.add_wall((210,0,0,0))
     r.map.draw()
     # print("about to navigate")
     for x,y in waypoints:
