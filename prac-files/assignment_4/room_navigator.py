@@ -359,13 +359,14 @@ class robot:
         rotation_amount = 0;
 
         if debug:
+            print("navigation to: (x,y)", x, y)
             print("xdiff: ", x_diff, "ydiff: ", y_diff, "self_estimate location (x,y,theta)", self.estimate_location)
         # Standard case, just compute the angle.
         #TODO: Chance the thresholds to the unfinessed version
         if not (x_diff < 3 and x_diff > -3) and not (y_diff < 3 and y_diff > -3) :
             rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
             if debug:
-                print ("atan value (case x_diff small): ", rotation_amount)
+                print ("took x & y big diff and turned: ", rotation_amount)
             if (x < 0): # atan returns the wrong value if the angle is in the 2nd/4th quadrant.
                 rotation_amount = rotation_amount + math.pi
 
@@ -374,15 +375,27 @@ class robot:
         elif (x_diff < 3 and x_diff > -3) :
             if (y_diff >=  0):
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
+                if debug:
+                    print("took x diff small and y diff positive and turned: ", rotation_amount)
             else :
                 rotation_amount = 3 * math.pi / 2 - self.estimate_location[2]
+                if debug:
+                    print("took x diff small and y diff neg and turned: ", rotation_amount)
 
         # Case on the same horizontal.
         elif (y_diff < 3 and y_diff > -3) :
             if (x_diff >= 0) :
                 rotation_amount = - self.estimate_location[2]
+                if debug:
+                    print("took y diff small and x diff pos and turned: ", rotation_amount)
             else:
                 rotation_amount = math.pi - self.estimate_location[2]
+                if debug:
+                    print("took y diff small and x diff neg and turned: ", rotation_amount)
+        
+        if abs(rotation_amount) < 0.001:
+            rotation_amount = 0
+            print("ignored rotation")
 
         # Step1: rotate by the amount we are off by.
         self.rotate(rotation_amount, 90)
@@ -423,12 +436,12 @@ class robot:
 #     (84, 30)\
 #     ]
 
-waypoints = [(1.04,0.3), (1.24, 0.3), (1.44, 0.3), (1.64, 0.3), (1.8,0.3),
-        (1.8, 0.5), (1.8, 0.54),
+waypoints = [(1.04,0.3), (1.24, 0.3), (1.44, 0.3), (1.64, 0.3), (1.8,0.3), 
+        (1.8, 0.42), (1.8, 0.54),
         (1.6, 0.54), (1.38, 0.54),
-        (1.38, 0.74), (1.38, 0.94), (1.38, 1.24), (1.38, 1.44), (1.38, 1.64), (1.38, 1.68),
-        (1.18, 1.68), (1.14, 1.68),
-        (1.14, 1.48), (1.14, 1.28), (1.14, 1.08), (1.14, 0.88), (1.14, 0.84),
+        (1.38, 0.74), (1.38, 0.94), (1.38, 1.14), (1.38, 1.34), (1.38, 1.54), (1.38, 1.68),
+        (1.14, 1.68),
+        (1.14, 1.48), (1.14, 1.28), (1.14, 1.08), (1.14, 0.84),
         (0.94, 0.84), (0.84, 0.84),
         (0.84, 0.64), (0.84, 0.44), (0.84, 0.3)]
 # Definitions of walls for test
