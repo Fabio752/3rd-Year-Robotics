@@ -12,9 +12,9 @@ BP.reset_all()
 
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
-standard_dev_distance = 1 # previously set to 1 (higher in order to show MCL working
+distance_var_ratio = 0.10 # previously set to 1 (higher in order to show MCL working
 standard_dev_angle = 0.015 # previously set to 0.015
-likelihood_standard_dev = 1
+likelihood_standard_dev = 3
 CARPET = "doc"
 USE_MCL = True
 INITIAL_POSITION = [84,30, 0] # assessment done on a robot starting not from the origin
@@ -27,11 +27,11 @@ def sensor_instantiation():
     BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 def get_encode_length(distance):
-    return (distance / 39.1) * 819.5
+    return (distance / 39.4) * 819.5
 
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
-    return (degree_amount / 144.7) * 360 if CARPET == "doc" else (degree_amount / 110.0) * 360
+    return (degree_amount / 141.5) * 360 if CARPET == "doc" else (degree_amount / 110.0) * 360
 
 # Canvas of the environment
 class Canvas:
@@ -284,6 +284,8 @@ class robot:
         self.stop_robot()
         # Update particle set.
         self.state.update_line(final_x, final_y)
+        var_distance = distance * distance_var_ratio
+        standard_dev_distance  = 1
         self.state.update_particle_set_line(0, standard_dev_distance, 0, 0.01, distance)
         
         while USE_MCL:
@@ -291,7 +293,7 @@ class robot:
                 # Reset sensor type (hack to make it work)
                 BP.reset_all()
                 BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-                time.sleep(2)
+                time.sleep(0.5)
                 if debug:
                     print("Sensor value", BP.get_sensor(BP.PORT_2))
                 self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_2) + sonar_offset)
@@ -357,22 +359,23 @@ class robot:
         x_diff = x - self.estimate_location[0]
         y_diff = y - self.estimate_location[1]
         rotation_amount = 0;
+        threshold = 5
 
         if debug:
             print("navigation to: (x,y)", x, y)
             print("xdiff: ", x_diff, "ydiff: ", y_diff, "self_estimate location (x,y,theta)", self.estimate_location)
         # Standard case, just compute the angle.
         #TODO: Chance the thresholds to the unfinessed version
-        if not (x_diff < 3 and x_diff > -3) and not (y_diff < 3 and y_diff > -3) :
-            rotation_amount = math.atan(y_diff/x_diff) - self.estimate_location[2]
+        if not (x_diff < threshold and x_diff > -threshold) and not (y_diff < threshold and y_diff > -threshold) :
+            rotation_amount = math.atan2(y_diff,x_diff) #- self.estimate_location[2]
             if debug:
                 print ("took x & y big diff and turned: ", rotation_amount)
-            if (x < 0): # atan returns the wrong value if the angle is in the 2nd/4th quadrant.
+            if (x_diff < 0): # atan returns the wrong value if the angle is in the 2nd/4th quadrant.
                 rotation_amount = rotation_amount + math.pi
 
         # If the point lies roughly on the same line we have special cases.
         # Case on the same vertical.
-        elif (x_diff < 3 and x_diff > -3) :
+        elif (x_diff < threshold and x_diff > -threshold) :
             if (y_diff >=  0):
                 rotation_amount = math.pi / 2 - self.estimate_location[2]
                 if debug:
@@ -383,7 +386,7 @@ class robot:
                     print("took x diff small and y diff neg and turned: ", rotation_amount)
 
         # Case on the same horizontal.
-        elif (y_diff < 3 and y_diff > -3) :
+        elif (y_diff < threshold and y_diff > -threshold) :
             if (x_diff >= 0) :
                 rotation_amount = - self.estimate_location[2]
                 if debug:
@@ -397,6 +400,7 @@ class robot:
             rotation_amount = 0
             print("ignored rotation")
 
+        
         # Step1: rotate by the amount we are off by.
         self.rotate(rotation_amount, 90)
 
@@ -405,7 +409,7 @@ class robot:
 
         # Step2: go forward.
         self.go_forward(distance_amount, 180, x, y)
-        time.sleep(1)
+        time.sleep(0.5)
         #recalculate particle distribution
         self.map.canvas.drawParticles(self.state.PARTICLE_SET)
 
@@ -442,7 +446,7 @@ waypoints = [(1.04,0.3), (1.24, 0.3), (1.44, 0.3), (1.64, 0.3), (1.8,0.3),
         (1.38, 0.74), (1.38, 0.94), (1.38, 1.14), (1.38, 1.34), (1.38, 1.54), (1.38, 1.68),
         (1.14, 1.68),
         (1.14, 1.48), (1.14, 1.28), (1.14, 1.08), (1.14, 0.84),
-        (0.94, 0.84), (0.84, 0.84),
+        (0.99, 0.84), (0.84, 0.84),
         (0.84, 0.64), (0.84, 0.44), (0.84, 0.3)]
 # Definitions of walls for test
 # a: O to A
