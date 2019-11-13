@@ -133,7 +133,7 @@ However, in a closed and reasonable environment (reasonable relative to the qual
 
 ### Assignment 4 : Monte Carlo Localisation
 
-## Sonar Likelihood and Measurement Update
+#### Sonar Likelihood and Measurement Update
 
 As described in the specification, the function *calculate_likelihood*  was implented, doing the following:
 
@@ -144,7 +144,7 @@ As described in the specification, the function *calculate_likelihood*  was impl
 * Calculate angle between the line of the robot facing the wall and the normal to the wall, rejecting angles that are too large (and hence would give an innacurate reading).
 * Compute the difference between the theoretical distance *m* and the actual sonar measurement, and use with likelihood function to scale the weight of the particle according to how close it was to the robot's measured position.
 
-## Normalising and Resampling
+#### Normalising and Resampling
 
 The *calculate_likelihood* function is called within the *update_particle_set_weights*, which after scaling all the weights in the particle set, will normalise them by summing up all the weights and dividing each particle wieght by this total, such that the sum of the weights is equal to 1 again.
 
