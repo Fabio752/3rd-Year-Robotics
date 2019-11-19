@@ -131,5 +131,31 @@ The accuracy of robot naviagtion depends on the environment it is placed in. If 
 
 However, in a closed and reasonable environment (reasonable relative to the quality of hardware available to us) we can safely assume that the sonar will not give garbage values. There may be some slight deviation from gound truth (as explored above) but this can be mitigated with software.
 
+### Assignment 4 : Monte Carlo Localisation
+
+#### Sonar Likelihood and Measurement Update
+
+As described in the specification, the function *calculate_likelihood*  was implented, doing the following:
+
+* For each particle, read the x,y and angle measurements
+* Using the sonar measurement, compute the distance *m* in the direction of the vector represented by the particle values to the  (if the wall were an infinite line).
+* Check if robot is actually facing the wall, by seeing if the x and y interesects as calculated via the distance *m* map to the segment representing the wall.
+  * If the robot coulding be facing multiple valid wall segments, take the closest one.
+* Calculate angle between the line of the robot facing the wall and the normal to the wall, rejecting angles that are too large (and hence would give an innacurate reading).
+* Compute the difference between the theoretical distance *m* and the actual sonar measurement, and use with likelihood function to scale the weight of the particle according to how close it was to the robot's measured position.
+
+#### Normalising and Resampling
+
+The *calculate_likelihood* function is called within the *update_particle_set_weights*, which after scaling all the weights in the particle set, will normalise them by summing up all the weights and dividing each particle wieght by this total, such that the sum of the weights is equal to 1 again.
+
+Resampling is done in a seperate *resample_particle_set*, which works in the following way:
+
+* Generate a cumulative weight array, where the index represented the particles of the particle set (in order) and the value is a cumulative weight, such that the last element will have value 1
+* Generate a random number between 0 and 1
+* Use the random number to select the index of the array, whose value is greater than this (indicating it is in the weight range of the particle)
+* Store the chosen particle into a new particle set
+* Repeat until a entirely new set is generated
+
+The idea of this is that the particles with a higher weight are more likely to be present in the resampled set. Since the weights were previously scaled depending on how different they were from the robot's inital positon, the particles that were less accurate are less likely to be present in the new set. Hence, the resampled set will be a lot more concentrated around the actual location of the robot.
 
 
