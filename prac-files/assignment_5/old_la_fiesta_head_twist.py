@@ -7,7 +7,7 @@ import math
 import copy
 
 BP = brickpi3.BrickPi3()
-BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 BP.reset_all()
 
 NUMBER_OF_PARTICLES = 100.0
@@ -62,7 +62,7 @@ class Canvas:
 class Map:
     def __init__(self):
         self.walls = []
-        self.canvas = Canvas(50)
+        self.canvas = Canvas()
     def add_wall(self, wall):
         self.walls.append(wall)
 
@@ -310,7 +310,7 @@ class robot:
         self.stop_robot()
 
     # Rotation on the spot.
-    def rotate(self, rad_amount, speed_dps, sonar_offset=7):
+    def rotate(self, rad_amount, speed_dps, sonar_offset=0):
         # Negate the speed if has to turn left, keep it for turning right.
         if(rad_amount > 0):
             speed_dps = -speed_dps
@@ -319,12 +319,14 @@ class robot:
             print("rad amount: ", rad_amount)
         # Set opposite wheels speed.
         actual_degree = 0
+        print("speed spd", speed_dps)
         BP.set_motor_dps(BP.PORT_A, -speed_dps)
         BP.set_motor_dps(BP.PORT_B, speed_dps)
         target_rotation = get_rotation_amount(abs(rad_amount))
 
         # Rotation on the spot.
         while actual_degree < target_rotation:
+            print("actual degree: ", actual_degree, "target rotation", target_rotation)
             actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
             time.sleep(0.02)
 
@@ -413,60 +415,23 @@ class robot:
         #recalculate particle distribution
         self.map.canvas.drawParticles(self.state.PARTICLE_SET)
     
-    
-    def rotate_sonar(self, total_angle, intervals):
-        rad_amount = abs(total_angle)
-        rad_interval = rad_amount / intervals
-        speed_dps = -45 if total_angle > 0 else 45
-        BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
-        print("encoder value: ", BP.get_motor_encoder(BP.PORT_B))
-        # Rotate robot left by 90 degrees.
-        for interval_count in range(intervals):
-            #Read sensor value
-            BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-            time.sleep(1)
-            try:
-                dis = BP.get_sensor(BP.PORT_1)
-                print("successful reading: ", dis)
-            except brickpi3.SensorError:
-                dis = 255
-            #Use sensor reading to print line
-            #Origin at 500, 500
-            origin = 15
-            line_scale = 0.2
-            #Fetch rotation angle
+    def rotate_top_motor(self, distance, speed_dps):
+        # Negating speed.
+        speed_dps = -speed_dps
+        BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
+        # Initializations.
+        target_degree_rotation = get_encode_length(distance)
+        actual_degree_rotation = 0
+        BP.set_motor_dps(BP.PORT_A, speed_dps)
 
-            #Print lines
-            current_angle = interval_count *rad_interval
-            print("current angle ", math.degrees(current_angle))
-            new_line = (origin,origin, origin + line_scale* dis * math.cos(current_angle), origin + line_scale * dis * math.sin(current_angle))
-            print(new_line)
-            self.map.canvas.drawLine(new_line)
+        print("setting to dps: ", speed_dps)
 
+        while actual_degree_rotation < target_degree_rotation:
+            actual_degree_rotation = -BP.get_motor_encoder(BP.PORT_A)
+            time.sleep(0.02)
 
-            #Move sonar
-            actual_degree = 0
-            BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
-            rad_amount = rad_amount - rad_interval
-            #BP.set_motor_dps(BP.PORT_A, -speed_dps)
-            #BP.set_motor_dps(BP.PORT_B, speed_dps)
-            #BP.set_motor_position(BP.PORT_B, 30)
-            print("rad amount %s inteval %s" % (rad_amount, rad_interval))
-            #target_rotation = get_rotation_amount(rad_interval)
-            target_rotation = math.degrees(rad_interval) * 0.9 #Arbitrary scaling to get to same spot
-            print("target rotation %s" % target_rotation)
-            while actual_degree < target_rotation:
-                actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
-                #print("actual degree ", actual_degree)
-                BP.set_motor_dps(BP.PORT_B, speed_dps)
-                time.sleep(0.02)
-               
-                #print("Rotation complete")
-            #Measurement and calculations should be done here
-            #print("rotation value %s" % BP.get_motor_encoder(BP.PORT_B))
-            self.stop_robot()
+        self.stop_robot()
 
-            
     # Debugging Function.
     def print_robot_stats(self, port):
         print("Port: %s Flag: %s Power: %s Position: %s Velocity: %s" % (port, BP.get_motor_status(port) [0], BP.get_motor_status(port) [1], BP.get_motor_status(port) [2], \
@@ -522,14 +487,9 @@ waypoints = [(1.04,0.3), (1.24, 0.3), (1.44, 0.3), (1.64, 0.3), (1.8,0.3),
 # mymap.draw()
 #Our test walls
 
-
 try:
-    # Initialise a robot object.
     r = robot()
-    #r.rotate_top(3.455555,45)
-    r.rotate_sonar(2*math.pi, 10)
-    r.rotate_sonar(-2*math.pi, 1) #Rotate sonar back around to untangle
-    r.stop_robot()
+    r.rotate_top_motor(2*math.pi,100) 
 # Keyboard Interrupt.
 except KeyboardInterrupt:
     r.stop_robot()
