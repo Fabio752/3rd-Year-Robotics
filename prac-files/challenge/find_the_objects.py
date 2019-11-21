@@ -7,18 +7,17 @@ import math
 import copy
 
 BP = brickpi3.BrickPi3()
-BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-BP.reset_all()
-
 #SPECIFY PORTS
 SONAR_MOTOR = BP.PORT_C
 LEFT_MOTOR = BP.PORT_A
 RIGHT_MOTOR = BP.PORT_B
 
 SONAR_SENSOR = BP.PORT_1
-LEFT_BUMPER = BP.PORT_2
-RIGHT_BUMPER = BP.PORT_3
+LEFT_BUMPER = BP.PORT_3
+RIGHT_BUMPER = BP.PORT_4
 
+BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.reset_all()
 
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
@@ -34,13 +33,13 @@ debug = True
 def sensor_instantiation():
     # Initialise sonar sensor
     # BP.reset_all()
-    BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-    BP.set_sensor_type(BP.PORT_3, BP.SENSOR_TYPE.TOUCH)
-    BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.TOUCH)
+    BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+    BP.set_sensor_type(LEFT_BUMPER, BP.SENSOR_TYPE.TOUCH)
+    BP.set_sensor_type(RIGHT_BUMPER, BP.SENSOR_TYPE.TOUCH)
 
 def clear_encoders():
-    BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
-    BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
+    BP.offset_motor_encoder(LEFT_MOTOR, BP.get_motor_encoder(LEFT_MOTOR))
+    BP.offset_motor_encoder(RIGHT_MOTOR, BP.get_motor_encoder(RIGHT_MOTOR))
 
 def get_encode_length(distance):
     return (distance / 39.4) * 819.5
@@ -352,11 +351,11 @@ class robot:
         # Initializations.
         target_degree_rotation = get_encode_length(distance)
         actual_degree_rotation = 0
-        BP.set_motor_dps(BP.PORT_A, speed_dps)
-        BP.set_motor_dps(BP.PORT_B, speed_dps)
+        BP.set_motor_dps(LEFT_MOTOR, speed_dps)
+        BP.set_motor_dps(RIGHT_MOTOR, speed_dps)
 
         while actual_degree_rotation < target_degree_rotation:
-            actual_degree_rotation = -(BP.get_motor_encoder(BP.PORT_A) + BP.get_motor_encoder(BP.PORT_B)) / 2
+            actual_degree_rotation = -(BP.get_motor_encoder(LEFT_MOTOR) + BP.get_motor_encoder(RIGHT_MOTOR)) / 2
             time.sleep(0.02)
             bump_occurred = r.sensor_touch()
             if bump_occurred:
@@ -377,11 +376,11 @@ class robot:
             try:
                 # Reset sensor type (hack to make it work)
                 BP.reset_all()
-                BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
                 time.sleep(0.5)
                 if debug:
-                    print("Sensor value", BP.get_sensor(BP.PORT_2))
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_2) + sonar_offset)
+                    print("Sensor value", BP.get_sensor(SONAR_SENSOR))
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(SONAR_SENSOR) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError as e:
@@ -404,13 +403,13 @@ class robot:
             print("rad amount: ", rad_amount)
         # Set opposite wheels speed.
         actual_degree = 0
-        BP.set_motor_dps(BP.PORT_A, -speed_dps)
-        BP.set_motor_dps(BP.PORT_B, speed_dps)
+        BP.set_motor_dps(LEFT_MOTOR, -speed_dps)
+        BP.set_motor_dps(RIGHT_MOTOR, speed_dps)
         target_rotation = get_rotation_amount(abs(rad_amount))
 
         # Rotation on the spot.
         while actual_degree < target_rotation:
-            actual_degree = abs(BP.get_motor_encoder(BP.PORT_B))
+            actual_degree = abs(BP.get_motor_encoder(RIGHT_MOTOR))
             time.sleep(0.02)
 
         self.stop_robot()
@@ -421,10 +420,10 @@ class robot:
             try:
                 # Reset sensor type (hack to make it work)
                 BP.reset_all()
-                BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+                BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
                 if debug:
-                    print("Sensor value: ", BP.get_sensor(BP.PORT_2))
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(BP.PORT_2) + sonar_offset)
+                    print("Sensor value: ", BP.get_sensor(SONAR_SENSOR))
+                self.state.update_particle_set_weights(self.map, BP.get_sensor(SONAR_SENSOR) + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError:
