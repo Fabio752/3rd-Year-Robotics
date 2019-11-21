@@ -10,6 +10,16 @@ BP = brickpi3.BrickPi3()
 BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 BP.reset_all()
 
+#SPECIFY PORTS
+SONAR_MOTOR = BP.PORT_C
+LEFT_MOTOR = BP.PORT_A
+RIGHT_MOTOR = BP.PORT_B
+
+SONAR_SENSOR = BP.PORT_1
+LEFT_BUMPER = BP.PORT_2
+RIGHT_BUMPER = BP.PORT_3
+
+
 NUMBER_OF_PARTICLES = 100.0
 general_weight = 1.0/NUMBER_OF_PARTICLES
 distance_var_ratio = 0.10 # previously set to 1 (higher in order to show MCL working
@@ -27,6 +37,10 @@ def sensor_instantiation():
     BP.set_sensor_type(BP.PORT_2, BP.SENSOR_TYPE.NXT_ULTRASONIC)
     BP.set_sensor_type(BP.PORT_3, BP.SENSOR_TYPE.TOUCH)
     BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.TOUCH)
+
+def clear_encoders():
+    BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
+    BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
 
 def get_encode_length(distance):
     return (distance / 39.4) * 819.5
@@ -182,12 +196,7 @@ class state:
     def update_line(self, final_x, final_y):
         self.line = (self.line[2], self.line[3], final_x, final_y)
 
-    # Update particle weights (using likelihood).
-    def calculate_likelihood(self, robo_map, x, y, theta, z):
-        # z = sonar measurement
-
-        # Find out which wall the sonar should be pointing to, and the expected distance m
-        min_distance = 255
+    def find_wall(self, robo_map, x, y, theta):
         chosen_wall = None #tuple of chosen wall + m value
         for wall in robo_map.walls:
             # Compute m
@@ -221,6 +230,15 @@ class state:
                 if debug:
                     #print("Chosen wall: ", chosen_wall)
                     pass
+        
+        return chosen_wall
+
+    # Update particle weights (using likelihood).
+    def calculate_likelihood(self, robo_map, x, y, theta, z):
+        # z = sonar measurement
+
+        # Find out which wall the sonar should be pointing to, and the expected distance m
+        chosen_wall = find_wall(robo_map, x, y, theta)
 
         if chosen_wall is not None:
             if debug:
@@ -267,14 +285,41 @@ class robot:
 
     def look_for_object(self, object_x, object_y) :
         # rotate slowly a 360, for each measurement of the sonar check if it is reasonable with the walls given, if not, stop and update the theta.
+        #Reset sonar motor encoder
+        BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
+        
+        #Begin rotating sonar
+        sonar_angle = 0
+        object_hit = False
+        while sonar_angle < 360:
+            BP.set_motor_dps(SONAR_MOTOR, 50)
+            #Measurement every 10 degrees (+-1 degree)
+            if abs(sonar_angle % 10) < 1:
+                dis = BP.get_sensor(SONAR_SENSOR)
+                #Figure out which wall it should be facing
+                chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location [1], self.get_estimate_location [2])
+                
+                #Object is at least 20 cm away from any wall, check if difference greater than this
+                if abs(sonar_angle - chosen_wall[3]) > 20:
+                    #Object hit, need to rotate robot by the sonar angle
+                    object_hit = True
+                    break
+
+        self.stop_robot()
+
+        if object_hit:
+            self.rotate (math.radians(sonar_angle), 50)
+        else:
+            #TODO do we scan again?
+            pass
 
     def sensor_touch(self):
         left_hit = 0
         right_hit = 0
         bump_occurred = False        
         try:
-            left_hit = BP.get_sensor(BP.PORT_3)
-            right_hit = BP.get_sensor(BP.PORT_4)
+            left_hit = BP.get_sensor(LEFT_BUMPER)
+            right_hit = BP.get_sensor(RIGHT_BUMPER)
             if debug:
                 print ("Right: %s, Left: %s" % (right_hit,left_hit))
         
@@ -303,8 +348,7 @@ class robot:
 
         # Negating speed.
         speed_dps = -speed_dps
-        BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
-        BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
+        clear_encoders()
         # Initializations.
         target_degree_rotation = get_encode_length(distance)
         actual_degree_rotation = 0
@@ -462,8 +506,7 @@ class robot:
     # Stop the robot.
     def stop_robot(self):
         BP.reset_all()
-        BP.offset_motor_encoder(BP.PORT_A, BP.get_motor_encoder(BP.PORT_A))
-        BP.offset_motor_encoder(BP.PORT_B, BP.get_motor_encoder(BP.PORT_B))
+        clear_encoders()
 
 
 ##################################################
