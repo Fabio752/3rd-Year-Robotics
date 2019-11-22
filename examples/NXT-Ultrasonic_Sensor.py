@@ -25,7 +25,7 @@ BP = brickpi3.BrickPi3() # Create an instance of the BrickPi3 class. BP will be 
 # BP.set_sensor_type configures the BrickPi3 for a specific sensor.
 # BP.PORT_1 specifies that the sensor will be on sensor port 1.
 # BP.SENSOR_TYPE.NXT_ULTRASONIC specifies that the sensor will be an NXT ultrasonic sensor.
-BP.set_sensor_type(BP.PORT_1, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+BP.set_sensor_type(BP.PORT_4, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 
 try:
     while True:
@@ -34,7 +34,7 @@ try:
         # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
         # BP.get_sensor returns the sensor value (what we want to display).
         try:
-            value = BP.get_sensor(BP.PORT_1)
+            value = BP.get_sensor(BP.PORT_4)
             print(value)                         # print the distance in CM
         except brickpi3.SensorError as error:
             print(error)

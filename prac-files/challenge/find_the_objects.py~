@@ -522,7 +522,7 @@ class robot:
 # 6. Win this moth*****ing competition
 
 
-waypoints = [(1.3,0.3)] #hardcode centers of sections
+waypoints = [(130,30)] #hardcode centers of sections
 
 try:
     r = robot()

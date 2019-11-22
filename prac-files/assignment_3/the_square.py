@@ -193,7 +193,7 @@ class robot:
             
         # Step1: rotation.
         # print("rotation %s\n" %rotation_amount)
-        self.rotate(rotation_amount, 90)       
+        self.rotate(rotation_amount, 360)       
         
         # Compute distance to travel.
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
@@ -204,7 +204,7 @@ class robot:
         
         # Step2: go forward.
         # print("distance amount %s \n" % distance_amount);
-        self.go_forward(distance_amount, 180, x, y)
+        self.go_forward(distance_amount, 500, x, y)
         
         # Print particles and line status.
         self.state.print_set()
