@@ -5,7 +5,6 @@ import time
 import random
 import math
 import copy
-import time
 
 BP = brickpi3.BrickPi3()
 #SPECIFY PORTS
@@ -26,7 +25,7 @@ distance_var_ratio = 0.10 # previously set to 1 (higher in order to show MCL wor
 standard_dev_angle = 0.015 # previously set to 0.015
 likelihood_standard_dev = 3
 CARPET = "doc"
-USE_MCL = True
+
 INITIAL_POSITION = [84,30, 0] # assessment done on a robot starting not from the origin
 debug = True
 
@@ -48,6 +47,9 @@ def get_encode_length(distance):
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
     return (degree_amount / 141.5) * 360 if CARPET == "doc" else (degree_amount / 110.0) * 360
+
+def get_distance(encoder_val): 
+    return (encoder_val /819.5) * 39.4
 
 # Canvas of the environment
 class Canvas:
@@ -192,10 +194,6 @@ class state:
 
         self.PARTICLE_SET = new_particle_set
 
-    # Line updater.
-    def update_line(self, final_x, final_y):
-        self.line = (self.line[2], self.line[3], final_x, final_y)
-
     def find_wall(self, robo_map, x, y, theta):
         chosen_wall = None #tuple of chosen wall + m value
         for wall in robo_map.walls:
@@ -283,48 +281,6 @@ class robot:
             estimate_location = (estimate_location[0] + particle[0], estimate_location[1] + particle[1], estimate_location[2] + particle[2])
         self.estimate_location = (estimate_location[0] / NUMBER_OF_PARTICLES, estimate_location[1] / NUMBER_OF_PARTICLES, estimate_location[2] / NUMBER_OF_PARTICLES)
 
-    def look_for_object(self, object_x, object_y) :
-        # rotate slowly a 360, for each measurement of the sonar check if it is reasonable with the walls given, if not, stop and update the theta.
-        #Reset sonar motor encoder
-        BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
-        sensor_instantiation() 
-        #Begin rotating sonar
-        sonar_angle = 0
-        object_hit = False
-        while sonar_angle < 360:
-            BP.set_motor_dps(SONAR_MOTOR, 50)
-            #Measurement every 10 degrees (+-1 degree)
-            if abs(sonar_angle % 10) < 1:
-                while True:
-                    try:
-                        dis = BP.get_sensor(SONAR_SENSOR)
-                        break
-                    except IOError as e:
-                        print("Warning: IO Error, skipping MCL...")
-                        print(e)
-                    except brickpi3.SensorError as e:
-                        print("Going forward")
-                        print(e)
-                time.sleep(0.02)
-                
-                #Figure out which wall it should be facing
-                chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location() [1], self.get_estimate_location() [2])
-                
-                #Object is at least 20 cm away from any wall, check if difference greater than this
-                if abs(sonar_angle - chosen_wall[3]) > 20:
-                    #Object hit, need to rotate robot by the sonar angle
-                    object_hit = True
-                    break
-                
-
-        self.stop_robot()
-
-        if object_hit:
-            self.rotate (math.radians(sonar_angle), 50)
-        else:
-            #TODO do we scan again?
-            pass
-
     def sensor_touch(self):
         left_hit = 0
         right_hit = 0
@@ -370,45 +326,26 @@ class robot:
 
     # Motion functions.
     # Straight motion.
-    def go_forward(self, distance, speed_dps, final_x, final_y, sonar_offset = 0):
-
+    def go_forward(self, distance, speed_dps, USE_MCL = False):
         # Negating speed.
         speed_dps = -speed_dps
         clear_encoders()
         # Initializations.
         target_degree_rotation = get_encode_length(distance)
         actual_degree_rotation = 0
+
         BP.set_motor_dps(LEFT_MOTOR, speed_dps)
         BP.set_motor_dps(RIGHT_MOTOR, speed_dps)
 
-        while actual_degree_rotation < target_degree_rotation:
+        left_hit = False
+        right_hit = False
+        while actual_degree_rotation < target_degree_rotation and not (left_hit or right_hit):
             actual_degree_rotation = -(BP.get_motor_encoder(LEFT_MOTOR) + BP.get_motor_encoder(RIGHT_MOTOR)) / 2
             #time.sleep(0.02)
             #TODO need to include a codition to slow down when sensor measurements are small
-            left_hit = 0
-            right_hit = 0
-            bump_occurred = False
-
-            #TODO take this off
-            self.stop_robot()
 
             sensor_instantiation()
 
-            while True:
-            # read and display the sensor value
-            # BP.get_sensor retrieves a sensor value.
-            # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
-            # BP.get_sensor returns the sensor value (what we want to display).
-                try:
-                    value = BP.get_sensor(BP.PORT_4)
-                    print("Sonar Measurement", value)
-                    break
-                    # print the distance in CM
-                except brickpi3.SensorError as error:
-                    #print(error)
-                    pass
-        
-                time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
 
             # BP.get_sensor returns the sensor value (what we want to display).
             while True:
@@ -426,46 +363,55 @@ class robot:
 
                 #Weirdest bug: You need to have to have this structure to be able to correctly read from the rouch sensors
 
-            if left_hit == 1 or right_hit == 1:
+            if left_hit or right_hit:
                 print("stopping robot, left and right hits", (left_hit, right_hit))
-                bump_occurred = True
-                self.stop_robot()
-
-            #bump_occurred = r.sensor_touch()
-            if bump_occurred:
-                # need to find a way to reset particle set to a new one estimated 10 cm on before and on the right or left of where the object is
-                # this could be done by manually update the estimate location during each sensor_touch call.
-                self.stop_robot()
-                return
 
         self.stop_robot()
         # Update particle set.
         
-        self.state.update_line(final_x, final_y)
-        var_distance = distance * distance_var_ratio
+        # var_distance = distance * distance_var_ratio
+        #Update distance in case robot hits early
+        distance = get_distance((BP.get_motor_encoder(LEFT_MOTOR) + BP.get_motor_encoder(RIGHT_MOTOR))/2)\
+             if (left_hit or right_hit) else distance
         standard_dev_distance  = 1
         self.state.update_particle_set_line(0, standard_dev_distance, 0, 0.01, distance)
         
-        while USE_MCL:
-            try:
-                self.state.update_particle_set_weights(self.map, sensor_value + sonar_offset)
-                self.state.resample_particle_set()
-                break
-            except IOError as e:
-                print("Warning: IO Error, skipping MCL...")
-                print(e)
-            except brickpi3.SensorError as e:
-                print("Going forward")
-                BP.reset_all()
-                sensor_instantiation()
-                print(e)
-                pass
+        if USE_MCL:
+            while True:
+            # read and display the sensor value
+            # BP.get_sensor retrieves a sensor value.
+            # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
+            # BP.get_sensor returns the sensor value (what we want to display).
+                try:
+                    sensor_value = BP.get_sensor(BP.PORT_4)
+                    print("Sonar Measurement", sensor_value)
+                    break
+                    # print the distance in CM
+                except brickpi3.SensorError as error:
+                    #print(error)
+                    pass
+            #     time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+
+            while True:
+                try:
+                    self.state.update_particle_set_weights(self.map, sensor_value)
+                    self.state.resample_particle_set()
+                    break
+                except IOError as e:
+                    print("Warning: IO Error, skipping MCL...")
+                    print(e)
+                except brickpi3.SensorError as e:
+                    print("Going forward")
+                    BP.reset_all()
+                    sensor_instantiation()
+                    print(e)
+                    pass
         # Update robot position and orientation estimates.
         self.set_estimate_location()
         self.stop_robot()
 
     # Rotation on the spot.
-    def rotate(self, rad_amount, speed_dps, sonar_offset=0):
+    def rotate(self, rad_amount, speed_dps, USE_MCL = False):
         # Negate the speed if has to turn left, keep it for turning right.
         if(rad_amount > 0):
             speed_dps = -speed_dps
@@ -487,6 +433,7 @@ class robot:
         # Update the particle set and location estimates.
         #We should not randomize unless we are not using MCL
         self.state.update_particle_set_angle(0, standard_dev_angle, rad_amount)
+
         while USE_MCL:
             try:
                 # Reset sensor type (hack to make it work)
@@ -503,6 +450,51 @@ class robot:
                 pass
                 #print(e)
         self.set_estimate_location()
+
+    def search_and_go_to_obj (self):
+            BP.set_motor_dps(LEFT_MOTOR, -30)
+            BP.set_motor_dps(RIGHT_MOTOR, 30)
+
+            sensor_instantiation() 
+
+            robot_angle = 0
+            target_found = False
+            while robot_angle < 180:
+                robot_angle = self.get_estimate_location() [2]
+                #Measurement every 10 degrees (+-1 degree)
+                if abs(robot_angle % 10) < 1:
+                    while True:
+                        try:
+                            dis = BP.get_sensor(SONAR_SENSOR)
+                            break
+                        except IOError as e:
+                            print("Warning: IO Error, skipping MCL...")
+                            print(e)
+                        except brickpi3.SensorError as e:
+                            print("Going forward")
+                            print(e)
+                    time.sleep(0.02)
+                    
+                    #Spread particles
+                    self.state.update_particle_set_angle(0, standard_dev_angle, 10)
+                    #Figure out which wall it should be facing
+                    chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location() [1], self.get_estimate_location() [2])
+                    
+                    #Object is at least 20 cm away from any wall, check if difference greater than this
+                    if abs(dis - chosen_wall[3]) > 15:
+                        #Object hit, need to rotate robot by the sonar angle
+                        target_found = True
+                        break
+
+                self.stop_robot()
+
+                if target_found:
+                    #Move the robot forward by the sonar reading
+                    self.go_forward(dis, 50, False)
+                else:
+                    #TODO do we scan again? no
+                    #TODO swipe through the entire section lol (intelligently)
+                    print("Target not found")
 
     # Move to a specific coordinate by :
     #    1 - rotating.
@@ -613,12 +605,35 @@ try:
     bumped_into_object = False
     object_x = None
     object_y = None
-    
-    #Navigating the first section of the map
-    r.navigate_to_waypoint(1,0.30)
-    r.stop_robot()
 
-    #Start scanning the surrounding area
+    # rotate slowly a 180, for each measurement of the sonar check if it is reasonable with the walls given, if not, stop and update the theta.
+    #Reset sonar motor encoder
+    BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
+    #Make robot begin rotating
+    r.rotate(-math.pi/2, 50, False)
+    r.search_and_go_to_obj()
+ 
+    #Go to the the set waypoint, straighten up to face wall A, then use mcl
+    r.navigate_to_waypoint(1, 0.54)
+    r.rotate(3/2*math.pi - math.radians(r.get_estimate_location() [2]), 50, True)
+
+    r.navigate_to_waypoint(1,1.68)
+    #Setup start of scan, face right wall E
+    r.rotate(math.radians(r.get_estimate_location() [2]), 50, False)
+    r.search_and_go_to_obj()
+
+    r.navigate_to_waypoint(1, 0.54)
+    #Straighten to face wall H, use MCL
+    r.rotate(-1/2*math.pi - math.radians(r.get_estimate_location() [2]), 50, True)
+
+    #Go to section C waypoint
+    r.navigate_to_waypoint(0.7, 0.54)
+    r.rotate(1/2*math.pi - math.radians(r.get_estimate_location() [2]), 50, False)
+    r.search_and_go_to_obj()
+
+    #Return to end
+    r.navigate_to_waypoint(0.84, 0.30)
+
     r.stop_robot()
 
 # Keyboard Interrupt.
