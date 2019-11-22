@@ -13,9 +13,9 @@ SONAR_MOTOR = BP.PORT_C
 LEFT_MOTOR = BP.PORT_A
 RIGHT_MOTOR = BP.PORT_B
 
-SONAR_SENSOR = BP.PORT_1
+SONAR_SENSOR = BP.PORT_4
 LEFT_BUMPER = BP.PORT_3
-RIGHT_BUMPER = BP.PORT_4
+RIGHT_BUMPER = BP.PORT_1
 
 BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 BP.reset_all()
@@ -287,7 +287,7 @@ class robot:
         # rotate slowly a 360, for each measurement of the sonar check if it is reasonable with the walls given, if not, stop and update the theta.
         #Reset sonar motor encoder
         BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
-        
+        sensor_instantiation() 
         #Begin rotating sonar
         sonar_angle = 0
         object_hit = False
@@ -295,15 +295,27 @@ class robot:
             BP.set_motor_dps(SONAR_MOTOR, 50)
             #Measurement every 10 degrees (+-1 degree)
             if abs(sonar_angle % 10) < 1:
-                dis = BP.get_sensor(SONAR_SENSOR)
+                while True:
+                    try:
+                        dis = BP.get_sensor(SONAR_SENSOR)
+                        break
+                    except IOError as e:
+                        print("Warning: IO Error, skipping MCL...")
+                        print(e)
+                    except brickpi3.SensorError as e:
+                        print("Going forward")
+                        print(e)
+                time.sleep(0.02)
+                
                 #Figure out which wall it should be facing
-                chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location [1], self.get_estimate_location [2])
+                chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location() [1], self.get_estimate_location() [2])
                 
                 #Object is at least 20 cm away from any wall, check if difference greater than this
                 if abs(sonar_angle - chosen_wall[3]) > 20:
                     #Object hit, need to rotate robot by the sonar angle
                     object_hit = True
                     break
+                
 
         self.stop_robot()
 
@@ -316,20 +328,34 @@ class robot:
     def sensor_touch(self):
         left_hit = 0
         right_hit = 0
-        bump_occurred = False        
-        try:
-            left_hit = BP.get_sensor(LEFT_BUMPER)
-            right_hit = BP.get_sensor(RIGHT_BUMPER)
-            if debug:
-                print ("Right: %s, Left: %s" % (right_hit,left_hit))
-        
-        except brickpi3.SensorError as error:
-            print(error)
+        bump_occurred = False 
+
+        sensor_instantiation()
+
+        # read and display the sensor value
+        # BP.get_sensor retrieves a sensor value.
+        # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
+        # BP.get_sensor returns the sensor value (what we want to display).
+        while True:
+
+            try:
+                right_hit = BP.get_sensor(RIGHT_BUMPER)
+                time.sleep(0.02)
+                left_hit = BP.get_sensor(LEFT_BUMPER)
+                print((right_hit, left_hit))
+                break
+            except brickpi3.SensorError as error:
+                print(error)
+                print("sensor touch")
+
+            #time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+            #Weirdest bug: You need to have to have this structure to be able to correctly read from the rouch sensors
 
         clear_encoders()
 
         # if bumped back up a bit
-        if left_hit or right_hit:
+        if left_hit == 1 or right_hit == 1:
+            print("stopping robot, left and right hits", (left_hit, right_hit))
             bump_occurred = True
             #self.go_forward(-10, 180, ...)
             # rotate in the best direction
@@ -357,9 +383,55 @@ class robot:
 
         while actual_degree_rotation < target_degree_rotation:
             actual_degree_rotation = -(BP.get_motor_encoder(LEFT_MOTOR) + BP.get_motor_encoder(RIGHT_MOTOR)) / 2
-            time.sleep(0.02)
+            #time.sleep(0.02)
             #TODO need to include a codition to slow down when sensor measurements are small
-            bump_occurred = r.sensor_touch()
+            left_hit = 0
+            right_hit = 0
+            bump_occurred = False
+
+            #TODO take this off
+            self.stop_robot()
+
+            sensor_instantiation()
+
+            while True:
+            # read and display the sensor value
+            # BP.get_sensor retrieves a sensor value.
+            # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
+            # BP.get_sensor returns the sensor value (what we want to display).
+                try:
+                    value = BP.get_sensor(BP.PORT_4)
+                    print("Sonar Measurement", value)
+                    break
+                    # print the distance in CM
+                except brickpi3.SensorError as error:
+                    #print(error)
+                    pass
+        
+                time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+
+            # BP.get_sensor returns the sensor value (what we want to display).
+            while True:
+
+                try:
+                    right_hit = BP.get_sensor(RIGHT_BUMPER)
+                    time.sleep(0.02)
+                    left_hit = BP.get_sensor(LEFT_BUMPER)
+                    print((right_hit, left_hit))
+                    break
+                except brickpi3.SensorError as error:
+                    pass
+                    #print(error)
+                    #print("sensor touch")
+
+                #Weirdest bug: You need to have to have this structure to be able to correctly read from the rouch sensors
+
+            if left_hit == 1 or right_hit == 1:
+                print("stopping robot, left and right hits", (left_hit, right_hit))
+                bump_occurred = True
+                self.stop_robot()
+
+            #bump_occurred = r.sensor_touch()
             if bump_occurred:
                 # need to find a way to reset particle set to a new one estimated 10 cm on before and on the right or left of where the object is
                 # this could be done by manually update the estimate location during each sensor_touch call.
@@ -376,19 +448,16 @@ class robot:
         
         while USE_MCL:
             try:
-                # Reset sensor type (hack to make it work)
-                BP.reset_all()
-                BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-                time.sleep(0.5)
-                if debug:
-                    print("Sensor value", BP.get_sensor(SONAR_SENSOR))
-                self.state.update_particle_set_weights(self.map, BP.get_sensor(SONAR_SENSOR) + sonar_offset)
+                self.state.update_particle_set_weights(self.map, sensor_value + sonar_offset)
                 self.state.resample_particle_set()
                 break
             except IOError as e:
                 print("Warning: IO Error, skipping MCL...")
                 print(e)
             except brickpi3.SensorError as e:
+                print("Going forward")
+                BP.reset_all()
+                sensor_instantiation()
                 print(e)
                 pass
         # Update robot position and orientation estimates.
@@ -494,7 +563,7 @@ class robot:
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
 
         # Step2: go forward.
-        self.go_forward(distance_amount, 180, x, y)
+        self.go_forward(distance_amount, 450, x, y)
         time.sleep(0.5)
         #recalculate particle distribution
         self.map.canvas.drawParticles(self.state.PARTICLE_SET)
@@ -522,7 +591,7 @@ class robot:
 # 6. Win this moth*****ing competition
 
 
-waypoints = [(1.3,0.3)] #hardcode centers of sections
+waypoints = [(1.55,0.3)] #hardcode centers of sections
 
 try:
     r = robot()
@@ -540,32 +609,16 @@ try:
     sensor_instantiation()
     
     # get to centre of each section and eventually back to start.
-    for x,y in waypoints:
-        bumped_into_object = False
-        object_x = None
-        object_y = None
-        
-        r.navigate_to_waypoint(x, y)
-        print("-----------------------------------")
-        print("Navigated to", x, ",", y )
-        print("-----------------------------------")
-        r.stop_robot()
+    #for x,y in waypoints:
+    bumped_into_object = False
+    object_x = None
+    object_y = None
+    
+    #Navigating the first section of the map
+    r.navigate_to_waypoint(1,0.30)
+    r.stop_robot()
 
-        #initialy we just want to ram into the first bottle without performing any localization
-
-
-        while not bumped_into_object :         
-            
-            # I am at the centre I need to look for the object
-            r.look_for_object(object_x, object_y)
-
-            if object_x != None and object_y != None :
-                r.navigate_to_waypoint(object_x, object_y, bumped_into_object, max_speed) # go crash into the object (might have a condition on sonar measurement to slow down close to the thing)
-                r.stop_robot()
-        # generate a new set of particles in the x, y estimates of the object
-
-        # we can back off a bit (maybe going towards the direction of the sensor that didnt register the bump)
-        time.sleep(0.1)
+    #Start scanning the surrounding area
     r.stop_robot()
 
 # Keyboard Interrupt.
