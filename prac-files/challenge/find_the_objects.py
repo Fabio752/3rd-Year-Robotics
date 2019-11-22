@@ -202,7 +202,6 @@ class state:
         for wall in robo_map.walls:
             # Compute m
             # Ax = chosen_wall[0], Ay = chosen_wall[1], Bx = chosen_wall[2], By = chosen_wall[3]
-            print("wall", wall)
             m = ((wall[3] - wall[1]) * (wall[0] - x) - (wall[2] - wall[0]) * (wall[1] - y)) /\
                 ((wall[3] - wall[1]) * math.cos(theta) - (wall[2] - wall[0]) * math.sin(theta))
             if debug:
@@ -439,45 +438,42 @@ class robot:
 
             if USE_SENSOR:
                 sensor_instantiation() 
-
-                robot_angle = get_angle(actual_degree)
-                #print("Actual Degree Encoding", actual_degree)
-                robot_angle = robot_angle + 0.01 #Prevent division by zero
-                print("Robot Angle: ", robot_angle)
-
                 target_found = False
+                dis = 0 #initialization
 
-                #Measurement every 10 degrees (+-1 degree)
-                if abs(robot_angle % 10) < 1:
-
-                    while True:
-                        # read and display the sensor value
-                        # BP.get_sensor retrieves a sensor value.
-                        # BP.PORT_1 specifies that we are looking for the value of sensor port 1.
-                        # BP.get_sensor returns the sensor value (what we want to display).
-                        try:
-                            value = BP.get_sensor(BP.PORT_4)
-                            print(value)
-                        except brickpi3.SensorError as error:
-                             print(error)
-                             time.sleep(0.02) 
-#                       delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+                #Measurements are made constantly
+                while True:
+                     s_error = False
+                     #We need this, don't take this out 
+                     robot_angle = get_angle(get_angle(abs(BP.get_motor_encoder(RIGHT_MOTOR))))
+                     robot_angle = robot_angle + 0.01 #Prevent division by zero
+                     #print("Robot Angle: ", robot_angle)
+                     #DO NOT CHANGE ANYTHING RELATED TO SENSORS IN THE FIRST PART OF THE LOOP
+                     try:
+                         dis = BP.get_sensor(BP.PORT_4)
+                         print(dis)
+                         s_error = False
+                     except brickpi3.SensorError as error:
+                         print(error)
+                         s_error = True
+                         time.sleep(0.02) 
                         
-                    chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location() [1], self.get_estimate_location() [2] +
+                     chosen_wall = self.state.find_wall(self.map, self.get_estimate_location() [0], self.get_estimate_location() [1], self.get_estimate_location() [2] +
                                 math.radians(robot_angle))  
-                    print("chosen wall is", chosen_wall)
-                        #Object is at least 20 cm away from any wall, check if difference greater than this
-#                        print(abs(dis - chosen_wall[3]))
-#                        if abs(dis - chosen_wall[3]) > 15:
-#                            #Object hit, need to rotate robot by the sonar angle
-#                            target_found = True
-#                            break
-#    
-#                    self.stop_robot()
-#    
-#                    if target_found:
-#                        #Move the robot forward by the sonar reading
-#                        self.go_forward(dis, 50, False)
+                     print("chosen wall is", chosen_wall)
+                     #Object is at least 20 cm away from any wall, check if difference greater than this
+                     print("value of m ", chosen_wall[4])
+                     print("difference: ", dis - chosen_wall[4])
+                     #Condition of having found a wall
+                     if (abs(dis - chosen_wall[4]) > 15) and not s_error:
+                         print("Found a wall")
+                         #primitive way of making the robot stop rotating without calling stop_robot() which messes with the sensors
+                         actual_degree = target_rotation + 1
+                         #When we actually detect the bottle, the rotation is usually a bit off, so we set a sleep timer in order to get a bit more turning
+                         time.sleep(0.8) #CAREFUL WITH THIS, THERE ARE SOME CASES IN WHICH SLEEPING FOR TOO LONG WILL CASE A PROBLEM
+                         #Go forward and hit the robot
+                         self.go_forward(dis,300,False)
+                         break
 #                    else:
 #                        #TODO do we scan again? no
 #                        #TODO swipe through the entire section lol (intelligently)
@@ -486,9 +482,7 @@ class robot:
   
 
 
-       # time.sleep(0.02)
 
-        self.stop_robot()
         # Update the particle set and location estimates.
         #We should not randomize unless we are not using MCL
         self.state.update_particle_set_angle(0, standard_dev_angle, rad_amount)
@@ -692,7 +686,7 @@ try:
     clear_encoders()
     #r.navigate_to_waypoint(1.1, 0.3)
     #Make robot begin rotating
-    r.rotate(math.pi/2, 90, False, True)
+    r.rotate(math.pi/2, 45, False, True)
 #    r.search_and_go_to_obj()
 # 
 #    #Go to the the set waypoint, straighten up to face wall A, then use mcl
