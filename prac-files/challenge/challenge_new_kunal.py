@@ -321,7 +321,7 @@ class robot:
        
     # Motion functions.
     # Straight motion.
-    def go_forward(self, distance, speed_dps, USE_MCL = False):
+    def go_forward(self, distance, speed_dps, bullshit_flag = False):
         reversing = False
         if speed_dps < 0:
             reversing = True
@@ -878,37 +878,30 @@ try:
     #Instantianting the sensor used
     sensor_instantiation()
     
-    # SECTION A
+    # BOTTLE 1 (TO OPTIMIZE)
     r.navigate_to_waypoint(1.03, 0.3)
     r.go_to_bottle_1() 
-    #Reverse after hit
+
+    #Reverse and reposition after hit
     r.go_forward(15, -200)
     theta = r.get_estimate_location()[2]
     x = r.get_estimate_location()[0]
-
     r.rotate(-theta, 90)
     r.go_forward(abs(110-x), -200)
     
-
-    '''
-    #Rotate and use MCL
-    #r.rotate(-math.pi/2 - r.get_estimate_location ()[2], 90)
-    #r.use_MCL(r.map.walls [7])
-    #r.rotate(math.pi/2,90)
-    '''
-    
+    #BOTTLE 2 (TO OPTIMIZE)
     r.navigate_to_waypoint(1.04, 0.94)
-    
     '''
-    r.rotate(math.pi/2 - r.get_estimate_location() [2], 90)
-    #r.go_to_bottle_2()
-    '''
+    #this works, don't touch (unlesss ur tharusha) 
     BP.reset_all()
     BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
     while True:
         BP.set_motor_position(SONAR_MOTOR, 90)
         time.sleep(0.02)
         break
+    '''
+
+
     #TODO Check if object dead ahead
 
     threshold = 0
