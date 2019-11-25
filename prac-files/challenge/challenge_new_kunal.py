@@ -47,13 +47,13 @@ def get_encode_length(distance):
 
 def get_rotation_amount (rad):
     degree_amount = rad * 57.296
-    return (degree_amount / 180) * 435 if CARPET == "doc" else (degree_amount / 110.0) * 360
+    return (degree_amount / 180.0) * 449 if CARPET == "doc" else (degree_amount / 110.0) * 360
 
 def get_distance(encoder_val): 
-    return (encoder_val /819.5) * 39.4
+    return (encoder_val /819.5) * 47.0
 
 def get_angle(encoder_angle_amount):
-    return (encoder_angle_amount * 141.5) / 360.0
+    return (encoder_angle_amount * 180.0) / 444.0
 
 
 def measure_sonar_global():
@@ -321,7 +321,7 @@ class robot:
        
     # Motion functions.
     # Straight motion.
-    def go_forward(self, distance, speed_dps, bullshit_flag = False):
+    def go_forward(self, distance, speed_dps):
         reversing = False
         if speed_dps < 0:
             reversing = True
@@ -437,6 +437,11 @@ class robot:
 
         return
 
+    def calculate_angle_to_wall(self, wall):
+        beta = math.acos(math.cos(self.estimate_location [2])*(wall[1] - wall[3]) + math.sin(self.estimate_location [2])*(wall[2] - wall[0]) / 
+        math.sqrt(math.pow((wall[1] - wall[3]), 2) + math.pow((wall[2] - wall[0]), 2)))
+        return math.degrees(beta)
+
 
     def forward_till_hit_w_sonar(self, distance, speed_dps, sonar_threshold):
         print("Location before forward till hit: ", self.get_estimate_location()) 
@@ -455,6 +460,9 @@ class robot:
         right_hit = False
         seen_object = False
         rotation_due_to_hit = 0
+        previous_value = 0
+        current_value = 0
+        cumulative_error = 0
         print("target degree", target_degree_rotation)
 
         while actual_degree_rotation < target_degree_rotation:
@@ -486,9 +494,14 @@ class robot:
                         print("After: ", BP.get_motor_encoder(LEFT_MOTOR))
                         break
                     time.sleep(0.02)
-                    if self.measure_sonar(2) < sonar_threshold:
+
+                    sonar_value = self.measure_sonar(2)
+
+                    if sonar_value < sonar_threshold:
                         print ("object found alongside")
                         seen_object = True
+                        #Account for sonar measuring things too early
+                        time.sleep(0.5)
                         BP.reset_all()
                         break
                     break
@@ -537,14 +550,14 @@ class robot:
             self.rotate(-0.75, 180)
         return
 
-    def measure_sonar(self, threshold = 10):
+    def measure_sonar(self, threshold = 5):
         #THRESHOLD = 10 #number of readings before value converges
         values =[]
         sensor_value = 0
         count = 0
         while count < threshold:
             sensor_value = measure_sonar_global()
-            if sensor_value < 180:
+            if sensor_value < 180 and sensor_value != 21 and sensor_value != 20 :
                 count += 1
                 values.append(sensor_value)
 
@@ -554,36 +567,36 @@ class robot:
         return sensor_value
 
     def go_to_bottle_1(self):
-        sensor_value = self.measure_sonar()
+        sensor_value = self.measure_sonar(5)
         
         #bottle is close
-        if sensor_value<40:
+        if sensor_value < 40:
             self.forward_till_hit(40, 200)
             print("Location: ", self.get_estimate_location())
 
 
         #bottle is in field of vision of sonar
-        elif sensor_value < 90:
-            self.go_forward(sensor_value-40, 500)
-            sensor_value = self.measure_sonar()
+        elif sensor_value < 75:
+            self.go_forward(sensor_value - 40, 500)
+            sensor_value = self.measure_sonar(4)
             print("Location: ", self.get_estimate_location())
             if sensor_value < 40:
                 #self.peek_left(sensor_value)
-                self.forward_till_hit(sensor_value-10, 200)
+                self.forward_till_hit(sensor_value - 10, 200)
                 print("Location: ", self.get_estimate_location())
             else:
                 if debug:
-                    print("new sonar reading >40, turning")
+                    print("new sonar reading > 40, turning")
                 self.rotate(0.5,90)
                 print("Location: ", self.get_estimate_location())
-                self.forward_till_hit(40, 200)
-                print("Location: ", self.get_estimate_location())
-            
-        #bottle outside field of vision
-        else:
-            self.rotate(0.3, 90)
+            self.forward_till_hit(40, 200)
             print("Location: ", self.get_estimate_location())
-            sensor_value = self.measure_sonar()
+        
+    #bottle outside field of vision
+        else:
+            self.rotate(0.5, 90)
+            print("Location: ", self.get_estimate_location())
+            sensor_value = self.measure_sonar(4)
             if sensor_value > 90:
                 self.rotate(0.4, 90)
                 print("Location: ", self.get_estimate_location())
@@ -595,16 +608,16 @@ class robot:
                     self.forward_till_hit(sensor_value - 10, 200)
                 else:
 
-                    self.go_forward(sensor_value-40, 500)
+                    self.go_forward(sensor_value - 40, 500)
                     print("Location: ", self.get_estimate_location())
-                    sensor_value = self.measure_sonar()
+                    sensor_value = self.measure_sonar(4)
                     if sensor_value < 40:
                         #self.peek_left(sensor_value)
-                        self.forward_till_hit(sensor_value-10, 200)
+                        self.forward_till_hit(sensor_value - 10, 200)
                         print("Location: ", self.get_estimate_location())
                     else:
                         if debug:
-                            print("new sonar reading >40, turning")
+                            print("new sonar reading > 40, turning")
                         self.rotate(0.5, 90)
                         print("Location: ", self.get_estimate_location())
                         self.forward_till_hit(40, 200)
@@ -612,38 +625,59 @@ class robot:
         return
 
     def go_to_bottle_2(self):
-        sensor_value = self.measure_sonar()
+        # TODO Check if object dead ahead
+        
+        print("GOING TO BOTTLE 2")
+        threshold = 40
+        forward_val = r.measure_sonar()
+        if forward_val < threshold:
+            r.go_forward(forward_val - 40, 500)
+            r.forward_till_hit (40, 250)
+            seen_object = False
+        else:
+            r.rotate_sonar(math.pi/2, 270)
+            #Take measurement to make correction
+            initial_distance = self.measure_sonar(4)
+            r.go_forward(15, 180)
+            final_distance = self.measure_sonar(4)
+            print("initial - final: ", initial_distance - final_distance)
+            if -5 < (initial_distance - final_distance) and (initial_distance - final_distance) < 0:
+                r.rotate(-0.05, 90)
+   
+            seen_object = r.forward_till_hit_w_sonar(190-r.get_estimate_location () [1], 150, 40)
+            r.rotate_sonar(math.pi/2, -270)
+        
+        if seen_object:
+            r.rotate(-math.pi/2, 90)
+            r.forward_till_hit(30, 250)
+            r.go_forward(15, -350)
+            r.rotate(-math.pi/2, 90)
+            r.go_forward (r.get_estimate_location() [1] - 94, 350)
+            r.rotate(-math.pi/2, 90)
+        else:
+            r.go_forward(r.get_estimate_location() [1] - 94, -350)
+            r.rotate(math.pi/2, 90)
+
+        return
+
+    def go_to_bottle_3(self):
+        print("GOING TO BOTTLE 3")
+        #Get to Area3     
+        self.go_forward(30, 400)
+        sensor_value = self.measure_sonar(5)
         
         #bottle is close
-        if sensor_value<40:
+        if sensor_value < 55:
             self.forward_till_hit(40, 200)
             print("Location: ", self.get_estimate_location())
 
-
-        #bottle is in field of vision of sonar
-        elif sensor_value < 120:
-            self.go_forward(sensor_value-40, 500)
-            sensor_value = self.measure_sonar()
-            print("Location: ", self.get_estimate_location())
-            if sensor_value < 40:
-                #self.peek_left(sensor_value)
-                self.forward_till_hit(sensor_value-10, 200)
-                print("Location: ", self.get_estimate_location())
-            else:
-                if debug:
-                    print("new sonar reading >40, turning")
-                self.rotate(-0.5,90)
-                print("Location: ", self.get_estimate_location())
-                self.forward_till_hit(40, 200)
-                print("Location: ", self.get_estimate_location())
-            
         #bottle outside field of vision
         else:
-            self.rotate(-0.3, 90)
+            self.rotate(-0.5, 90)
             print("Location: ", self.get_estimate_location())
-            sensor_value = self.measure_sonar()
-            if sensor_value > 120:
-                self.rotate(-0.4, 90)
+            sensor_value = self.measure_sonar(4)
+            if sensor_value > 60:
+                self.rotate(-0.5, 90)
                 print("Location: ", self.get_estimate_location())
                 self.forward_till_hit(40, 200)
                 print("Location: ", self.get_estimate_location())
@@ -653,16 +687,15 @@ class robot:
                     self.forward_till_hit(sensor_value - 10, 200)
                 else:
 
-                    self.go_forward(sensor_value-40, 500)
+                    self.go_forward(sensor_value - 40, 500)
                     print("Location: ", self.get_estimate_location())
-                    sensor_value = self.measure_sonar()
+                    sensor_value = self.measure_sonar(4)
                     if sensor_value < 40:
-                        #self.peek_left(sensor_value)
-                        self.forward_till_hit(sensor_value-10, 200)
+                        self.forward_till_hit(sensor_value - 10, 200)
                         print("Location: ", self.get_estimate_location())
                     else:
                         if debug:
-                            print("new sonar reading >40, turning")
+                            print("new sonar reading > 40, turning")
                         self.rotate(-0.5, 90)
                         print("Location: ", self.get_estimate_location())
                         self.forward_till_hit(40, 200)
@@ -820,7 +853,7 @@ class robot:
         distance_amount = math.sqrt(pow(x_diff, 2) + pow(y_diff, 2))
 
         # Step2: go forward.
-        self.go_forward(distance_amount, 250, False)
+        self.go_forward(distance_amount, 350)
         #recalculate particle distribution
         #self.map.canvas.drawParticles(self.state.PARTICLE_SET)
     
@@ -838,6 +871,7 @@ class robot:
 
         BP.set_motor_dps(SONAR_MOTOR, 0)
         return
+
 
     # Debugging Function.
     def print_robot_stats(self, port):
@@ -877,20 +911,32 @@ try:
 
     #Instantianting the sensor used
     sensor_instantiation()
-    
+
     # BOTTLE 1 (TO OPTIMIZE)
-    r.navigate_to_waypoint(1.03, 0.3)
+    r.navigate_to_waypoint(1.16, 0.3)
     r.go_to_bottle_1() 
 
-    #Reverse and reposition after hit
-    r.go_forward(15, -200)
+    # Reverse and reposition after hit
+    r.go_forward(15, -350)
     theta = r.get_estimate_location()[2]
     x = r.get_estimate_location()[0]
+    print("the value of theta is:", theta)
     r.rotate(-theta, 90)
-    r.go_forward(abs(110-x), -200)
-    
-    #BOTTLE 2 (TO OPTIMIZE)
-    r.navigate_to_waypoint(1.04, 0.94)
+    #backward value depending on distance
+    backward_speed  = -350
+    if (x < 105):
+        backward_speed = 350
+   
+    r.go_forward(abs(105 - x), backward_speed)
+    # Here we should check with sonar that we are parallel to the wall
+
+        #BOTTLE 2 (TO OPTIMIZE)
+    r.rotate(math.pi/2-0.05, 90)
+    r.go_forward(104- r.estimate_location[1],350)
+    #r.navigate_to_waypoint(1.04, 1.04)
+    r.go_to_bottle_2()
+
+    r.go_to_bottle_3()
     '''
     #this works, don't touch (unlesss ur tharusha) 
     BP.reset_all()
@@ -899,39 +945,6 @@ try:
         BP.set_motor_position(SONAR_MOTOR, 90)
         time.sleep(0.02)
         break
-    '''
-
-
-    #TODO Check if object dead ahead
-
-    threshold = 0
-
-    forward_val = r.measure_sonar()
-    if forward_val < threshold:
-        r.go_forward(forward_val - 20, 500)
-        r.forward_till_hit (10, 250)
-        seen_object = False
-    else:
-        
-        r.rotate_sonar(math.pi/2, 90)
-        seen_object = r.forward_till_hit_w_sonar(190-r.get_estimate_location () [1], 150, 40)
-        r.rotate_sonar(math.pi/2, -90)
-    if seen_object:
-        r.rotate(-math.pi/2, 90)
-        r.forward_till_hit(30, 250)
-        r.go_forward(15, -350)
-        r.rotate(-math.pi/2, 90)
-        r.go_forward (100, 350)
-        r.rotate(-math.pi/2, 90)
-    else:
-        r.go_forward(100, -350)
-        r.rotate(math.pi/2, 90)
-        #r.go_forward(130, -200)
-    
-
-
-
-    '''
     while True:
         #sensor_instantiation()
         r.measure_sonar()
