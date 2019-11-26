@@ -5,7 +5,8 @@ import time
 import random
 import math
 import copy
-import statistics
+#import statistics
+import sys
 
 BP = brickpi3.BrickPi3()
 #SPECIFY PORTS
@@ -17,7 +18,7 @@ SONAR_SENSOR = BP.PORT_4
 LEFT_BUMPER = BP.PORT_3
 RIGHT_BUMPER = BP.PORT_1
 
-BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+#BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
 BP.reset_all()
 
 NUMBER_OF_PARTICLES = 100.0
@@ -34,7 +35,7 @@ debug = True
 def sensor_instantiation():
     # Initialise sonar sensor
     # BP.reset_all()
-    BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
+    #BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
     BP.set_sensor_type(LEFT_BUMPER, BP.SENSOR_TYPE.TOUCH)
     BP.set_sensor_type(RIGHT_BUMPER, BP.SENSOR_TYPE.TOUCH)
 
@@ -72,12 +73,16 @@ def measure_sonar_global():
                 #print(error)
                 #BP.reset_all()
                 # reset all sensors
-                BP.set_sensor_type(BP.PORT_1 + BP.PORT_2 + BP.PORT_3 + BP.PORT_4, BP.SENSOR_TYPE.NONE)
+
+                #BP.set_sensor_type(BP.PORT_1 + BP.PORT_2 + BP.PORT_3 + BP.PORT_4, BP.SENSOR_TYPE.NONE)
+                BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NONE)
+                time.sleep(0.02)
                 BP.set_sensor_type(SONAR_SENSOR, BP.SENSOR_TYPE.NXT_ULTRASONIC)
-                BP.set_sensor_type(LEFT_BUMPER, BP.SENSOR_TYPE.TOUCH)
-                BP.set_sensor_type(RIGHT_BUMPER, BP.SENSOR_TYPE.TOUCH)
+                time.sleep(0.02)
+                #BP.set_sensor_type(LEFT_BUMPER, BP.SENSOR_TYPE.TOUCH)
+                #BP.set_sensor_type(RIGHT_BUMPER, BP.SENSOR_TYPE.TOUCH)
                         
-            time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
+            #time.sleep(0.02)  # delay for 0.02 seconds (20ms) to reduce the Raspberry Pi CPU load.
         
         return value
 
@@ -169,6 +174,17 @@ class state:
             # Weights are updated seperately
             self.PARTICLE_SET[i] = (particle[0], particle[1], theta_new, particle[3])
             i = i + 1
+
+    def change_particle_set_angle(self, alpha):
+        i = 0
+        for particle in self.PARTICLE_SET:
+            theta_new = alpha 
+            # Weights are updated seperately
+            self.PARTICLE_SET[i] = (particle[0], particle[1], theta_new, particle[3])
+            i = i + 1
+
+
+
 
     # Weight updater.
     def update_particle_set_weights(self, robo_map, sonar_measurement):
@@ -393,10 +409,10 @@ class robot:
                     if BP.get_sensor(RIGHT_BUMPER):
                         right_hit = True
                         print("before: ",BP.get_motor_encoder(LEFT_MOTOR))
-                        encoder_before_hit = statistics.mean([abs(BP.get_motor_encoder(LEFT_MOTOR)), abs(BP.get_motor_encoder(RIGHT_MOTOR))])
+                        encoder_before_hit = (abs(BP.get_motor_encoder(LEFT_MOTOR)) + abs(BP.get_motor_encoder(RIGHT_MOTOR)))/2
                         BP.reset_all()
                         print("After: ", BP.get_motor_encoder(LEFT_MOTOR))
-                        rotation_due_to_hit = statistics.mean([abs(BP.get_motor_encoder(LEFT_MOTOR)), abs(BP.get_motor_encoder(RIGHT_MOTOR))]) - encoder_before_hit
+                        rotation_due_to_hit = (abs(BP.get_motor_encoder(LEFT_MOTOR)) + abs(BP.get_motor_encoder(RIGHT_MOTOR)))/2 - encoder_before_hit
                         break
                     time.sleep(0.02)
                     #left_hit = BP.get_sensor(LEFT_BUMPER)
@@ -435,7 +451,7 @@ class robot:
         print("Location after forward till hit: ", self.get_estimate_location())
 
 
-        return
+        return (left_hit or right_hit)
 
     def calculate_angle_to_wall(self, wall):
         beta = math.acos(math.cos(self.estimate_location [2])*(wall[1] - wall[3]) + math.sin(self.estimate_location [2])*(wall[2] - wall[0]) / 
@@ -480,10 +496,10 @@ class robot:
                     if BP.get_sensor(RIGHT_BUMPER):
                         right_hit = True
                         print("before: ",BP.get_motor_encoder(LEFT_MOTOR))
-                        encoder_before_hit = statistics.mean([abs(BP.get_motor_encoder(LEFT_MOTOR)), abs(BP.get_motor_encoder(RIGHT_MOTOR))])
+                        encoder_before_hit = (abs(BP.get_motor_encoder(LEFT_MOTOR)) + abs(BP.get_motor_encoder(RIGHT_MOTOR)))/2
                         BP.reset_all()
                         print("After: ", BP.get_motor_encoder(LEFT_MOTOR))
-                        rotation_due_to_hit = statistics.mean([abs(BP.get_motor_encoder(LEFT_MOTOR)), abs(BP.get_motor_encoder(RIGHT_MOTOR))]) - encoder_before_hit
+                        rotation_due_to_hit = (abs(BP.get_motor_encoder(LEFT_MOTOR)) + abs(BP.get_motor_encoder(RIGHT_MOTOR)))/2 - encoder_before_hit
                         break
                     time.sleep(0.02)
                     #left_hit = BP.get_sensor(LEFT_BUMPER)
@@ -539,15 +555,18 @@ class robot:
 
 
     def peek_left(self, old_sonar): #why is rotation so inaccurate?
-        self.rotate(0.75, 180)
-        time.sleep(1) #to remove later
+        self.rotate_sonar(0.4, 90)
+        time.sleep(0.5) #to remove later
         new_sonar = measure_sonar()
         if debug:
             print("peeked left. old sonar:", old_sonar,  "new sonar:", new_sonar)
 
-        time.sleep(1)
-        if new_sonar >= old_sonar:
-            self.rotate(-0.75, 180)
+        #time.sleep(1)
+        if new_sonar <  old_sonar:
+            self.rotate(0.4, 90)
+
+        self.rotate_sonar(-0.4, 90)
+
         return
 
     def measure_sonar(self, threshold = 5):
@@ -557,12 +576,13 @@ class robot:
         count = 0
         while count < threshold:
             sensor_value = measure_sonar_global()
-            if sensor_value < 180 and sensor_value != 21 and sensor_value != 20 :
+            if (sensor_value < 180) and (sensor_value != 21) and (sensor_value != 20):
                 count += 1
                 values.append(sensor_value)
 
 
-        sensor_value = statistics.median(values)
+        #sensor_value = statistics.median(values)
+        sensor_value = values[len(values) // 2]
         print("Sonar: ", sensor_value)
         return sensor_value
 
@@ -631,20 +651,20 @@ class robot:
         threshold = 40
         forward_val = r.measure_sonar()
         if forward_val < threshold:
-            r.go_forward(forward_val - 40, 500)
+            r.go_forward(forward_val - 40, 300)
             r.forward_till_hit (40, 250)
             seen_object = False
         else:
             r.rotate_sonar(math.pi/2, 270)
             #Take measurement to make correction
-            initial_distance = self.measure_sonar(4)
-            r.go_forward(15, 180)
-            final_distance = self.measure_sonar(4)
-            print("initial - final: ", initial_distance - final_distance)
-            if -5 < (initial_distance - final_distance) and (initial_distance - final_distance) < 0:
-                r.rotate(-0.05, 90)
+            #initial_distance = self.measure_sonar(4)
+            #r.go_forward(15, 180)
+            #final_distance = self.measure_sonar(4)
+            #print("initial - final: ", initial_distance - final_distance)
+            #if -5 < (initial_distance - final_distance) and (initial_distance - final_distance) < 0:
+            #    r.rotate(-0.05, 90)
    
-            seen_object = r.forward_till_hit_w_sonar(190-r.get_estimate_location () [1], 150, 40)
+            seen_object = r.forward_till_hit_w_sonar(190-r.get_estimate_location () [1], 450, 40)
             r.rotate_sonar(math.pi/2, -270)
         
         if seen_object:
@@ -662,8 +682,12 @@ class robot:
 
     def go_to_bottle_3(self):
         print("GOING TO BOTTLE 3")
+        self.state.change_particle_set_angle(math.pi/2)
+        self.set_estimate_location()
         #Get to Area3     
-        self.go_forward(30, 400)
+        hit = self.forward_till_hit(30, 250)
+        if hit:
+            return
         sensor_value = self.measure_sonar(5)
         
         #bottle is close
@@ -676,7 +700,7 @@ class robot:
             self.rotate(-0.5, 90)
             print("Location: ", self.get_estimate_location())
             sensor_value = self.measure_sonar(4)
-            if sensor_value > 60:
+            if sensor_value > 70:
                 self.rotate(-0.5, 90)
                 print("Location: ", self.get_estimate_location())
                 self.forward_till_hit(40, 200)
@@ -687,10 +711,10 @@ class robot:
                     self.forward_till_hit(sensor_value - 10, 200)
                 else:
 
-                    self.go_forward(sensor_value - 40, 500)
+                    self.rotate(-0.5, 90)
                     print("Location: ", self.get_estimate_location())
                     sensor_value = self.measure_sonar(4)
-                    if sensor_value < 40:
+                    if sensor_value < 45:
                         self.forward_till_hit(sensor_value - 10, 200)
                         print("Location: ", self.get_estimate_location())
                     else:
@@ -700,6 +724,8 @@ class robot:
                         print("Location: ", self.get_estimate_location())
                         self.forward_till_hit(40, 200)
                         print("Location: ", self.get_estimate_location())
+
+
         return
 
 
@@ -909,6 +935,13 @@ try:
     r.map.add_wall((210,0,0,0))
     r.map.draw()
 
+    test_sonar = False
+
+    if test_sonar:
+        while True:
+            r.measure_sonar()
+        sys.exit()
+
     #Instantianting the sensor used
     sensor_instantiation()
 
@@ -924,31 +957,24 @@ try:
     r.rotate(-theta, 90)
     #backward value depending on distance
     backward_speed  = -350
-    if (x < 105):
+    if (x < 93):
         backward_speed = 350
    
-    r.go_forward(abs(105 - x), backward_speed)
+    r.go_forward(abs(97 - x), backward_speed)
     # Here we should check with sonar that we are parallel to the wall
 
         #BOTTLE 2 (TO OPTIMIZE)
-    r.rotate(math.pi/2-0.05, 90)
-    r.go_forward(104- r.estimate_location[1],350)
+    r.rotate((math.pi/2)-0.1, 90)
+    r.go_forward(84- r.estimate_location[1],350)
     #r.navigate_to_waypoint(1.04, 1.04)
     r.go_to_bottle_2()
 
     r.go_to_bottle_3()
-    '''
-    #this works, don't touch (unlesss ur tharusha) 
-    BP.reset_all()
-    BP.offset_motor_encoder(SONAR_MOTOR, BP.get_motor_encoder(SONAR_MOTOR))
-    while True:
-        BP.set_motor_position(SONAR_MOTOR, 90)
-        time.sleep(0.02)
-        break
-    while True:
-        #sensor_instantiation()
-        r.measure_sonar()
-    ''' 
+
+    r.go_forward(5, -350)
+
+    r.navigate_to_waypoint(84,30)
+   
 
     r.stop_robot()
 
